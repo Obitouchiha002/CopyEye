@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -333,23 +334,67 @@ fun CopiedToast(visible: Boolean, characterCount: Int, modifier: Modifier = Modi
     }
 }
 
+/**
+ * The "working on it" state.
+ *
+ * Shows how long it has been running once a scan passes a second. Recognition cost tracks how
+ * textured an image is, so a photo or a video frame can legitimately take several times longer than
+ * an app's own text — and a progress animation with no numbers on it is indistinguishable from a
+ * hang. A visible counter and a way out are what stop a slow scan from reading as a broken app.
+ */
 @Composable
-fun ScanningBanner(reducedMotion: Boolean, modifier: Modifier = Modifier) {
+fun ScanningBanner(
+    reducedMotion: Boolean,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var elapsedMs by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) {
+        val started = System.currentTimeMillis()
+        while (true) {
+            kotlinx.coroutines.delay(200)
+            elapsedMs = System.currentTimeMillis() - started
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         ScanWave(reducedMotion = reducedMotion, modifier = Modifier.fillMaxSize())
-        Text(
-            text = "Reading the screen…",
-            style = MaterialTheme.typography.labelLarge,
-            color = Color.White,
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .systemBarsPadding()
                 .fillMaxWidth()
                 .padding(bottom = 96.dp),
-            textAlign = TextAlign.Center,
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = if (elapsedMs < 1_000) {
+                    "Reading the screen…"
+                } else {
+                    "Reading the screen…  ${elapsedMs / 1000}s"
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+            if (elapsedMs > SLOW_SCAN_HINT_MS) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Photos and video take longer than app text",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onCancel) {
+                    Text("Cancel", color = Color.White)
+                }
+            }
+        }
     }
 }
+
+private const val SLOW_SCAN_HINT_MS = 2_500L
 
 private const val TOUCH_TOLERANCE_DP = 12
 private const val OUTLINE_PADDING_PX = 2f

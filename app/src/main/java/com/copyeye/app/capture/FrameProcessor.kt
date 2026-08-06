@@ -18,12 +18,15 @@ object FrameProcessor {
     /**
      * Longest edge fed to the recogniser.
      *
-     * ML Kit needs roughly 20px of glyph height for reliable results. A 1440p phone screen renders
-     * body text at about 45px tall, so halving it still leaves ample margin while cutting the
-     * pixels ML Kit has to walk by a factor of four. Accurate mode raises the cap for small text
-     * such as image captions and code.
+     * ML Kit needs roughly 20px of glyph height for reliable results. A 1080p phone screen renders
+     * body text around 45px tall, so a 1024px cap leaves roughly 20px — enough, and it cuts the
+     * pixels the detector walks to about a third of the raw frame. That matters more than it looks:
+     * recognition cost tracks pixel count and image texture, and a photograph costs many times what
+     * a clean interface screenshot does at the same size.
+     *
+     * Accurate mode raises the cap for small text such as image captions and code.
      */
-    private const val FAST_MAX_EDGE = 1280
+    private const val FAST_MAX_EDGE = 1024
     private const val ACCURATE_MAX_EDGE = 1920
 
     /**

@@ -48,7 +48,11 @@ interface TextRecognitionEngine {
      *
      * @param scripts which recognisers to run, in the order given.
      */
-    fun recognizeProgressive(frame: ScreenFrame, scripts: Set<OcrScript>): Flow<OcrResult>
+    fun recognizeProgressive(
+        frame: ScreenFrame,
+        scripts: Set<OcrScript>,
+        perScriptTimeoutMs: Long = DEFAULT_SCRIPT_TIMEOUT_MS,
+    ): Flow<OcrResult>
 
     /** Convenience for callers that genuinely need everything before proceeding, such as tests. */
     suspend fun recognize(frame: ScreenFrame, scripts: Set<OcrScript>): OcrResult =
@@ -58,6 +62,19 @@ interface TextRecognitionEngine {
     fun close()
 }
 
+/**
+ * How long any one script gets before it is abandoned.
+ *
+ * Chosen from a measurement, not a guess: a clean interface screenshot recognises in a few hundred
+ * milliseconds, while a photograph or video frame can run an order of magnitude longer because the
+ * detector's cost tracks image texture rather than text. Eight seconds is far beyond any useful
+ * result and well short of the point where a user decides the app is broken.
+ */
+const val DEFAULT_SCRIPT_TIMEOUT_MS = 8_000L
+
 /** Thrown when no recogniser could be created at all — a missing or corrupt bundled model. */
 class OcrUnavailableException(message: String, cause: Throwable? = null) :
     Exception(message, cause)
+
+/** Thrown when recognition ran but nothing finished inside its budget. */
+class OcrTimedOutException(message: String) : Exception(message)

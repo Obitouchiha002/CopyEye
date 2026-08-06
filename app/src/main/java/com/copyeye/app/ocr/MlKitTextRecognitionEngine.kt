@@ -16,7 +16,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -89,6 +91,7 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
     override fun recognizeProgressive(
         frame: ScreenFrame,
         scripts: Set<OcrScript>,
+        perScriptTimeoutMs: Long,
     ): Flow<OcrResult> = flow {
         val bitmap = frame.bitmap
         if (bitmap.isRecycled) {
@@ -108,10 +111,22 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
             }
             val scriptStarted = SystemClock.elapsedRealtime()
             val text = try {
-                // A fresh InputImage per recogniser. Sharing one across calls makes ML Kit's
-                // native side lock and unlock the same pixel buffer twice, which it reports as
-                // "Failed to unlock pixels for bitmap" and which loses the second result.
-                recognizer.process(InputImage.fromBitmap(bitmap, frame.rotationDegrees)).await()
+                // A hard ceiling per script.
+                //
+                // ML Kit's detector cost scales with how textured an image is, not with how much
+                // text it contains. A clean interface screenshot finishes in a few hundred
+                // milliseconds; a photograph or a video frame can take tens of seconds on the same
+                // device. Without a ceiling that shows up to the user as a scan that never
+                // finishes — which is indistinguishable from a broken app.
+                withTimeout(perScriptTimeoutMs) {
+                    // A fresh InputImage per recogniser. Sharing one across calls makes ML Kit's
+                    // native side lock and unlock the same pixel buffer twice, which it reports as
+                    // "Failed to unlock pixels for bitmap" and which loses the second result.
+                    recognizer.process(InputImage.fromBitmap(bitmap, frame.rotationDegrees)).await()
+                }
+            } catch (e: TimeoutCancellationException) {
+                Log.w(TAG, "$script gave up after ${perScriptTimeoutMs}ms")
+                null
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -137,7 +152,7 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
         }
 
         if (collected.isEmpty()) {
-            throw OcrUnavailableException("No text recogniser could be created")
+            throw OcrTimedOutException("No script produced a result in time")
         }
     }.flowOn(Dispatchers.Default)
 

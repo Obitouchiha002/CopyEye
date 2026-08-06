@@ -183,7 +183,7 @@ class ScanActivity : ComponentActivity() {
                             onRegion = {},
                         )
                     }
-                    ScanningBanner(reducedMotion = viewModel.reducedMotion)
+                    ScanningBanner(reducedMotion = viewModel.reducedMotion, onCancel = onClose)
                 }
 
                 is ScanUiState.Ready -> {
@@ -283,6 +283,9 @@ class ScanActivity : ComponentActivity() {
             "The screen took too long to capture. Try again."
         com.copyeye.app.core.state.CopyEyeError.CaptureEmpty ->
             "Nothing came back from the capture. Try again."
+        com.copyeye.app.core.state.CopyEyeError.OcrTimedOut ->
+            "This screen took too long to read. Photos and video frames are much slower than app " +
+                "text — try zooming in on just the part you want, then scanning again."
         com.copyeye.app.core.state.CopyEyeError.OcrUnavailable ->
             "The text recogniser could not start on this device."
         com.copyeye.app.core.state.CopyEyeError.LowMemory ->

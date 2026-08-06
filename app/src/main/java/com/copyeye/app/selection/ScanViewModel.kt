@@ -15,6 +15,7 @@ import com.copyeye.app.core.state.CopyEyeEvent
 import com.copyeye.app.core.state.ScanTiming
 import com.copyeye.app.data.preferences.AppSettings
 import com.copyeye.app.ocr.OcrResult
+import com.copyeye.app.ocr.OcrTimedOutException
 import com.copyeye.app.ocr.OcrUnavailableException
 import com.copyeye.app.ocr.SmartActionDetector
 import com.copyeye.app.ocr.TextRect
@@ -90,6 +91,10 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
                     }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: OcrTimedOutException) {
+                _uiState.value = ScanUiState.Failed(CopyEyeError.OcrTimedOut)
+                CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.OcrTimedOut))
+                return@launch
             } catch (e: OcrUnavailableException) {
                 _uiState.value = ScanUiState.Failed(CopyEyeError.OcrUnavailable)
                 CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.OcrUnavailable))
