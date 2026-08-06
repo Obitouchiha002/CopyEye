@@ -13,3 +13,4 @@ app/build/
 *.aab
 *.keystore
 *.jks
+copyeye-test.jks

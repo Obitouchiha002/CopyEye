@@ -19,6 +19,19 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    /**
+     * A local, checked-in-nowhere key so a release build can actually be installed on a phone for
+     * testing. It is not a distribution key: replace it with your own before shipping anything.
+     */
+    signingConfigs {
+        create("testing") {
+            storeFile = file("../copyeye-test.jks")
+            storePassword = "copyeye123"
+            keyAlias = "copyeye"
+            keyPassword = "copyeye123"
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -32,12 +45,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // No debug signing config is attached: a release build must be signed explicitly.
+            signingConfig = signingConfigs.getByName("testing")
         }
     }
 
     buildFeatures {
         compose = true
+        // The Shizuku capture path runs a small service inside the shell process, which needs an
+        // AIDL boundary.
+        aidl = true
     }
 
     /**
@@ -117,6 +133,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.json)
+
+    // Optional capture path: shell-privileged screenshots with no consent dialog and no
+    // screen-recording indicator, in exchange for a one-time pairing the user performs themselves.
+    // The app degrades to MediaProjection whenever Shizuku is absent, which is the common case.
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     // On-device OCR. Both models are bundled into the APK, so recognition works with no network
     // and no Play Services dependency.

@@ -19,11 +19,31 @@ enum class OcrMode { Fast, Accurate }
 enum class HighlightStyle { Outline, Fill, Underline }
 
 /**
+ * How CopyEye gets a picture of the screen.
+ *
+ * [ScreenRecording] is Android's public API: works everywhere, no setup, and costs either a consent
+ * dialog or a recording indicator. [Shizuku] runs the platform's own `screencap` with shell
+ * privileges the user granted outside this app: no dialog and no indicator, but it needs Shizuku
+ * installed and re-activated after each reboot on an unrooted phone.
+ *
+ * [Automatic] uses Shizuku when it is ready and falls back to screen recording otherwise, which is
+ * what almost everyone should leave it on.
+ */
+enum class CaptureMethod { Automatic, ScreenRecording, Shizuku }
+
+/**
  * How long a screen-capture session survives with no scanning.
  *
- * Android shows a screen-recording indicator for as long as the session exists — it cannot be
- * suppressed, and should not be. Releasing the session when it is not being used is the only
- * honest way to make the indicator go away, at the cost of a fresh consent dialog next time.
+ * This is the app's central trade-off, and Android leaves no third option:
+ *
+ *  - Keep the session ([Never]) and the user is asked once, then every tap scans instantly — but
+ *    the system's screen-recording indicator sits on the status bar the whole time.
+ *  - Release it and the indicator goes — but a new session needs new consent, so the system dialog
+ *    returns on the next scan.
+ *
+ * The indicator is raised by the session *existing*, not by frames being read, so no amount of care
+ * inside the app can have both. [Never] is the default because a dialog on every scan makes the
+ * one-tap promise meaningless, while an indicator is something a user learns to read correctly.
  */
 enum class ProjectionIdleTimeout(val millis: Long?) {
     /** Zero grace. The icon is on screen only while a scan is actually happening. */
@@ -78,7 +98,8 @@ data class AppSettings(
     val scripts: Set<OcrScript> = setOf(OcrScript.Latin, OcrScript.Devanagari),
     val ocrMode: OcrMode = OcrMode.Fast,
     val smartFrameMode: Boolean = false,
-    val projectionIdleTimeout: ProjectionIdleTimeout = ProjectionIdleTimeout.Immediately,
+    val captureMethod: CaptureMethod = CaptureMethod.Automatic,
+    val projectionIdleTimeout: ProjectionIdleTimeout = ProjectionIdleTimeout.Never,
     val autoCopySingleLine: Boolean = false,
     val closeAfterCopy: Boolean = true,
     val closeAfterCopyDelayMs: Long = 550L,

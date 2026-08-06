@@ -20,7 +20,7 @@ a word, a line, a paragraph, or everything. Copy, and you are back in the app yo
 | **Smart actions** | Links, phone numbers, email addresses and addresses get a secondary action |
 | **Clipboard history** | Optional, off by default, local only, with automatic expiry |
 | **Privacy** | On-device OCR, no network permission at all, frames deleted after each scan |
-| **No recording indicator at rest** | CopyEye holds zero screen access until you tap. Android's screen-recording icon appears for the scan and goes. |
+| **Capture methods** | Android's screen-recording API by default; optional Shizuku path for no dialog and no status-bar icon at all |
 | **Runs on** | Android 10 and every version above it |
 
 ---

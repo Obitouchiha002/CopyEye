@@ -85,6 +85,18 @@ For video that can be paused, pausing gives a better result than any burst.
 re-running at full resolution on a crop. It cleans up a noisy result but does not recover text that
 was too small to read the first time. Switching to Accurate mode does.
 
+### The Shizuku capture path is written but unverified
+
+`ShizukuCaptureSource` and its shell-side service compile and are wired into the capture-source
+selection, but nothing in them has been executed — verifying it needs Shizuku installed and paired on
+a real device. Treat it as untested code until someone does that. The app defaults to `Automatic`,
+which uses Shizuku only when it reports itself ready, so a broken Shizuku path should degrade to the
+normal screen-recording flow rather than breaking scanning.
+
+Also note it does **not** bypass `FLAG_SECURE`: `screencap` run as shell has no
+`CAPTURE_SECURE_VIDEO_OUTPUT`, so protected screens come back blanked exactly as they do through
+`MediaProjection`.
+
 ### The `specialUse` foreground-service type needs a Play justification
 
 The idle service runs as `FOREGROUND_SERVICE_TYPE_SPECIAL_USE`, which is what lets the floating eye

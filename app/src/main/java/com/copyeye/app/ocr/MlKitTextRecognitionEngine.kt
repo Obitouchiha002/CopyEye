@@ -69,7 +69,7 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
                     } catch (e: Exception) {
                         Log.w(TAG, "Warm-up failed for $script: ${e.message}")
                     }
-                    Log.d(TAG, "warm-up $script took ${SystemClock.elapsedRealtime() - started}ms")
+                    Log.i(TAG, "warm-up $script took ${SystemClock.elapsedRealtime() - started}ms")
                 }
             } finally {
                 probe.recycle()
@@ -119,7 +119,7 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
                 Log.w(TAG, "Recognition failed for $script: ${e.message}")
                 null
             }
-            Log.d(TAG, "$script took ${SystemClock.elapsedRealtime() - scriptStarted}ms")
+            Log.i(TAG, "$script took ${SystemClock.elapsedRealtime() - scriptStarted}ms")
 
             if (text != null) {
                 collected += text

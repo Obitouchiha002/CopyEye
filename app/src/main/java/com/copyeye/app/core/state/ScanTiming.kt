@@ -40,10 +40,13 @@ object ScanTiming {
         val summary = "scan total=${total}ms " +
             "(hide=${hideMs} capture=${captureMs} prepare=${prepareMs} ocr=${ocrMs}) " +
             "lines=$lineCount warm=$warm"
+        // Info level, not debug: these lines carry timings and counts and never any screen
+        // content, and they are the only way to answer "is it under a second on your phone?" from
+        // a release build.
         if (total > TARGET_TOTAL_MS) {
             Log.w(TAG, "OVER TARGET — $summary")
         } else {
-            Log.d(TAG, summary)
+            Log.i(TAG, summary)
         }
     }
 }

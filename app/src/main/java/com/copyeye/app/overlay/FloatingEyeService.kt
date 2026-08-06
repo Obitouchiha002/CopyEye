@@ -22,7 +22,10 @@ import com.copyeye.app.R
 import com.copyeye.app.capture.CaptureOutcome
 import com.copyeye.app.capture.FrameProcessor
 import com.copyeye.app.capture.FrameStore
+import com.copyeye.app.capture.FrameAnalysis
 import com.copyeye.app.capture.MediaProjectionController
+import com.copyeye.app.capture.ScreenCaptureSource
+import com.copyeye.app.capture.shizuku.ShizukuCaptureSource
 import com.copyeye.app.core.common.ApiLevel
 import com.copyeye.app.core.state.CopyEyeBus
 import com.copyeye.app.core.state.CopyEyeError
@@ -30,6 +33,7 @@ import com.copyeye.app.core.state.CopyEyeEvent
 import com.copyeye.app.core.state.CopyEyeState
 import com.copyeye.app.core.state.ScanTiming
 import com.copyeye.app.data.preferences.AppSettings
+import com.copyeye.app.data.preferences.CaptureMethod
 import com.copyeye.app.data.preferences.ProjectionIdleTimeout
 import com.copyeye.app.selection.ScanActivity
 import kotlinx.coroutines.Job
@@ -59,6 +63,19 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
     private lateinit var container: com.copyeye.app.AppContainer
     private lateinit var controller: FloatingEyeController
     private lateinit var projection: MediaProjectionController
+    private lateinit var shizuku: ShizukuCaptureSource
+
+    /**
+     * Which source a scan should use right now.
+     *
+     * Shizuku wins when the user has actually set it up, because it costs them neither a dialog nor
+     * a recording indicator. Everyone else — the overwhelming majority — gets the public API.
+     */
+    private fun activeSource(): ScreenCaptureSource = when (settings.captureMethod) {
+        CaptureMethod.Shizuku -> shizuku
+        CaptureMethod.ScreenRecording -> projection
+        CaptureMethod.Automatic -> if (shizuku.isReady || shizuku.hasPermission) shizuku else projection
+    }
 
     private var settings: AppSettings = AppSettings()
     private var scanJob: Job? = null
@@ -71,6 +88,8 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         super.onCreate()
         container = (application as CopyEyeApp).container
         projection = container.projectionController
+        shizuku = container.shizukuCaptureSource
+        shizuku.connect()
         controller = FloatingEyeController(this, container.haptics, this)
         controller.setPositionPersister { x, y ->
             lifecycleScope.launch { container.settingsRepository.savePosition(x, y) }
@@ -117,7 +136,7 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         // The projection's virtual display has to follow the rotation, and resize is the only way
         // to do that — Android 14 forbids creating a second display on the same projection.
         val metrics = currentDisplayMetrics()
-        projection.resize(metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
+        activeSource().onDisplayChanged(metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
     }
 
     override fun onDestroy() {
@@ -125,7 +144,8 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         hideJob?.cancel()
         idleStopJob?.cancel()
         controller.detach()
-        projection.stop()
+        projection.release()
+        shizuku.release()
         FrameStore.clear()
         CopyEyeBus.setServiceRunning(false)
         super.onDestroy()
@@ -261,14 +281,21 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         // impatience than a request for a different frame.
         if (scanJob?.isActive == true) return
 
-        if (!projection.isActive) {
-            // The session was released while idle. Ask for it back and run this scan as soon as
-            // it is granted, so the user's tap still ends in a scan rather than in a settings
-            // screen they then have to act on.
-            startActivity(
-                MainActivity.reconnectIntent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            return
+        val source = activeSource()
+        if (!source.isReady) {
+            if (source is ShizukuCaptureSource) {
+                // Shizuku is configured but not connected yet — bind and let this tap fall through
+                // to the capture, which waits for the binding.
+                source.connect()
+            } else {
+                // The screen-recording session was released. Ask for it back and run this scan as
+                // soon as it is granted, so the user's tap still ends in a scan rather than in a
+                // settings screen they then have to act on.
+                startActivity(
+                    MainActivity.reconnectIntent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+                return
+            }
         }
         if (container.deviceCapabilities.isUnderMemoryPressure()) {
             CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.LowMemory))
@@ -288,9 +315,9 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
                 controller.hideEyeForCapture()
                 val hiddenAt = SystemClock.elapsedRealtime()
                 val outcome = if (settings.smartFrameMode && !settings.lowPerformanceMode) {
-                    projection.captureSharpestFrame(SMART_FRAME_COUNT)
+                    captureSharpest(source, SMART_FRAME_COUNT)
                 } else {
-                    projection.captureFrame()
+                    source.capture()
                 }
                 val capturedAt = SystemClock.elapsedRealtime()
                 controller.setEyeVisible(!paused)
@@ -307,10 +334,14 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
                         // Screen access is handed back the instant the pixels are in memory —
                         // before recognition, before the user has even chosen anything. From here
                         // on the scan is working on a bitmap, not on the screen.
-                        if (settings.projectionIdleTimeout == ProjectionIdleTimeout.Immediately) {
-                            releaseScreenAccess()
-                        } else {
-                            scheduleProjectionRelease()
+                        // Shizuku holds nothing that raises an indicator, so there is nothing to
+                        // give back; only the projection path needs releasing.
+                        if (source is MediaProjectionController) {
+                            if (settings.projectionIdleTimeout == ProjectionIdleTimeout.Immediately) {
+                                releaseScreenAccess()
+                            } else {
+                                scheduleProjectionRelease()
+                            }
                         }
                         FrameStore.put(prepared)
                         ScanTiming.record(
@@ -351,6 +382,37 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
                 CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.Unknown))
             }
         }
+    }
+
+    /**
+     * Takes a short burst and keeps the sharpest frame, for video where a single grab often lands on
+     * a motion-blurred frame.
+     */
+    private suspend fun captureSharpest(source: ScreenCaptureSource, frames: Int): CaptureOutcome {
+        var best: com.copyeye.app.capture.ScreenFrame? = null
+        var bestScore = -1.0
+        var lastFailure: CaptureOutcome = CaptureOutcome.Failure(CopyEyeError.CaptureEmpty)
+        repeat(frames.coerceIn(1, 4)) {
+            when (val outcome = source.capture()) {
+                is CaptureOutcome.Success -> {
+                    val score = FrameAnalysis.sharpness(outcome.frame.bitmap)
+                    if (score > bestScore) {
+                        best?.release()
+                        best = outcome.frame
+                        bestScore = score
+                    } else {
+                        outcome.frame.release()
+                    }
+                }
+                // A blanked frame is conclusive; there is no point burning the rest of the burst.
+                CaptureOutcome.SecureContent -> {
+                    best?.release()
+                    return CaptureOutcome.SecureContent
+                }
+                is CaptureOutcome.Failure -> lastFailure = outcome
+            }
+        }
+        return best?.let { CaptureOutcome.Success(it) } ?: lastFailure
     }
 
     /**
@@ -431,7 +493,7 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
     /** Drops back to the idle type once a scan no longer needs screen access. */
     private fun releaseScreenAccess() {
         idleStopJob?.cancel()
-        if (projection.isActive) projection.stop()
+        if (projection.isActive) projection.release()
         CopyEyeBus.setProjectionActive(false)
         if (currentForegroundType != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
             startAsForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)

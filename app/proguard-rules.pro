@@ -12,10 +12,13 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Recognised text must never reach a crash report. Stripping the log calls that could
-# carry it is cheaper than auditing every call site.
+# Recognised text must never reach a crash report. Stripping the chatty levels is cheaper
+# than auditing every call site.
+#
+# Log.i is deliberately kept: the only things logged at that level are scan timings and
+# counts — never screen content — and they are what lets someone measure the app's latency
+# on their own phone from a release build. See core/state/ScanTiming.kt.
 -assumenosideeffects class android.util.Log {
     public static int d(...);
     public static int v(...);
-    public static int i(...);
 }

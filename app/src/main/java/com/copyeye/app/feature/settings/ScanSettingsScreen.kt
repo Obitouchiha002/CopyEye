@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.copyeye.app.AppContainer
 import com.copyeye.app.data.preferences.AppSettings
+import com.copyeye.app.data.preferences.CaptureMethod
 import com.copyeye.app.data.preferences.HighlightStyle
 import com.copyeye.app.data.preferences.HistoryRetention
 import com.copyeye.app.data.preferences.OcrMode
@@ -22,6 +23,7 @@ import com.copyeye.app.ui.components.DetailScaffold
 import com.copyeye.app.ui.components.SettingsChoiceRow
 import com.copyeye.app.ui.components.SettingsDivider
 import com.copyeye.app.ui.components.SettingsMultiChoiceRow
+import com.copyeye.app.ui.components.SettingsNavigationRow
 import com.copyeye.app.ui.components.SettingsSection
 import com.copyeye.app.ui.components.SettingsSliderRow
 import com.copyeye.app.ui.components.SettingsSwitchRow
@@ -29,12 +31,16 @@ import com.copyeye.app.ui.components.asPercent
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+private const val SHIZUKU_REQUEST_CODE = 4201
+
 @Composable
 fun ScanSettingsScreen(container: AppContainer, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val settings by container.settingsRepository.settings
         .collectAsStateWithLifecycle(initialValue = AppSettings())
     val tier = container.deviceCapabilities.tier
+    val shizukuInstalled = container.shizukuCaptureSource.isShizukuRunning
+    val shizukuReady = container.shizukuCaptureSource.hasPermission
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settingsRepository.update(transform) }
@@ -100,6 +106,45 @@ fun ScanSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 checked = settings.lowPerformanceMode,
                 onCheckedChange = { enabled -> update { it.copy(lowPerformanceMode = enabled) } },
             )
+        }
+
+        SettingsSection(title = "How the screen is captured") {
+            SettingsChoiceRow(
+                title = "Capture method",
+                options = CaptureMethod.entries,
+                selected = settings.captureMethod,
+                labelOf = { method ->
+                    when (method) {
+                        CaptureMethod.Automatic -> "Automatic"
+                        CaptureMethod.ScreenRecording -> "Screen recording"
+                        CaptureMethod.Shizuku -> "Shizuku"
+                    }
+                },
+                onSelect = { method -> update { it.copy(captureMethod = method) } },
+            )
+            Text(
+                text = if (shizukuReady) {
+                    "Shizuku is set up on this phone. With it, scans need no permission dialog and " +
+                        "raise no screen-recording icon at all."
+                } else {
+                    "Screen recording is Android's own method: it works everywhere with no setup, " +
+                        "and costs either a permission dialog or a status-bar icon.\n\n" +
+                        "Shizuku removes both, but you have to install the Shizuku app and start " +
+                        "it once over wireless debugging — and again after each restart, unless " +
+                        "your phone is rooted. Not set up on this phone right now."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+            if (!shizukuReady && shizukuInstalled) {
+                SettingsDivider()
+                SettingsNavigationRow(
+                    title = "Grant Shizuku permission",
+                    subtitle = "Shizuku is running but has not been given access to CopyEye",
+                    onClick = { container.shizukuCaptureSource.requestPermission(SHIZUKU_REQUEST_CODE) },
+                )
+            }
         }
 
         SettingsSection(title = "Screen-recording indicator") {

@@ -6,9 +6,8 @@
 #  - Android Gradle Plugin 9.x ships Kotlin support built in, so `org.jetbrains.kotlin.android`
 #    must NOT be applied. The bundled Kotlin version is 2.3.21 and every Kotlin compiler plugin
 #    below is pinned to exactly that version.
-#  - minSdk is deliberately as low as the platform allows: MediaProjection was introduced in
-#    API 21, so API 21 is the hard floor for this product. Everything newer is version-gated
-#    at runtime (see core/common/ApiLevel.kt).
+#  - minSdk is Android 10 (API 29). Everything newer is version-gated at runtime, in one place:
+#    core/common/ApiLevel.kt. See docs/LIMITATIONS.md for why 29 is the floor.
 ####################################################################################################
 
 [versions]
@@ -37,6 +36,9 @@ kotlinxSerialization = "1.9.0"
 
 # --- ML Kit (on-device OCR, bundled models — no Play Services dependency) -------------------------
 mlkitTextRecognition = "16.0.1"
+
+# --- Shizuku (optional shell-privileged capture) --------------------------------------------------
+shizuku = "13.1.5"
 
 # --- Testing -------------------------------------------------------------------------------------
 junit4 = "4.13.2"
@@ -84,6 +86,10 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 # --- ML Kit --------------------------------------------------------------------------------------
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 mlkit-text-recognition-devanagari = { group = "com.google.mlkit", name = "text-recognition-devanagari", version.ref = "mlkitTextRecognition" }
+
+# --- Shizuku -------------------------------------------------------------------------------------
+shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
+shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 
 # --- Testing -------------------------------------------------------------------------------------
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }

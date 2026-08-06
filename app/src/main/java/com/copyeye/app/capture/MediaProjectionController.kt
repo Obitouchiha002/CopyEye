@@ -15,6 +15,7 @@ import android.os.HandlerThread
 import android.util.Log
 import com.copyeye.app.core.common.ApiLevel
 import com.copyeye.app.core.state.CopyEyeError
+import com.copyeye.app.data.preferences.CaptureMethod
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
@@ -40,7 +41,7 @@ import kotlinx.coroutines.withTimeout
  * That is what makes "CopyEye only looks when you tap it" a structural property rather than a
  * promise about how carefully the code avoids reading a buffer it is continuously being handed.
  */
-class MediaProjectionController(private val context: Context) {
+class MediaProjectionController(private val context: Context) : ScreenCaptureSource {
 
     /** Raised when the system tears the projection down — user revoked, or another app took over. */
     fun interface SessionListener {
@@ -65,6 +66,20 @@ class MediaProjectionController(private val context: Context) {
     private var listener: SessionListener? = null
 
     val isActive: Boolean get() = projection != null && virtualDisplay != null
+
+    override val method: CaptureMethod = CaptureMethod.ScreenRecording
+
+    override val isReady: Boolean get() = isActive
+
+    /** Consent is asked for per session, so "setup" is whether a session is currently live. */
+    override val needsSetup: Boolean get() = !isActive
+
+    override suspend fun capture(timeoutMs: Long): CaptureOutcome = captureFrame(timeoutMs)
+
+    override fun onDisplayChanged(width: Int, height: Int, densityDpi: Int) =
+        resize(width, height, densityDpi)
+
+    override fun release() = stop()
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
@@ -139,7 +154,7 @@ class MediaProjectionController(private val context: Context) {
      * The display is resized rather than recreated, because recreating it would need a second
      * `createVirtualDisplay` call, which Android 14 forbids.
      */
-    fun resize(width: Int, height: Int, densityDpi: Int) {
+    private fun resize(width: Int, height: Int, densityDpi: Int) {
         val display = virtualDisplay ?: return
         if (width == displayWidth && height == displayHeight) return
         if (width <= 0 || height <= 0) return
@@ -197,37 +212,6 @@ class MediaProjectionController(private val context: Context) {
             detachSurface(display, reader)
             captureInFlight.set(false)
         }
-    }
-
-    /**
-     * Takes a short burst and keeps the sharpest frame. Used for video, where a single grab often
-     * lands on a motion-blurred or half-decoded frame.
-     */
-    suspend fun captureSharpestFrame(frames: Int, timeoutMs: Long = CAPTURE_TIMEOUT_MS): CaptureOutcome {
-        var best: ScreenFrame? = null
-        var bestScore = -1.0
-        var lastFailure: CaptureOutcome = CaptureOutcome.Failure(CopyEyeError.CaptureEmpty)
-        repeat(frames.coerceIn(1, 4)) {
-            when (val outcome = captureFrame(timeoutMs)) {
-                is CaptureOutcome.Success -> {
-                    val score = FrameAnalysis.sharpness(outcome.frame.bitmap)
-                    if (score > bestScore) {
-                        best?.release()
-                        best = outcome.frame
-                        bestScore = score
-                    } else {
-                        outcome.frame.release()
-                    }
-                }
-                // A blanked frame is conclusive; there is no point burning the rest of the burst.
-                CaptureOutcome.SecureContent -> {
-                    best?.release()
-                    return CaptureOutcome.SecureContent
-                }
-                is CaptureOutcome.Failure -> lastFailure = outcome
-            }
-        }
-        return best?.let { CaptureOutcome.Success(it) } ?: lastFailure
     }
 
     private suspend fun awaitFrame(display: VirtualDisplay, reader: ImageReader): Bitmap? =
@@ -291,7 +275,7 @@ class MediaProjectionController(private val context: Context) {
         }
     }
 
-    fun stop() {
+    private fun stop() {
         teardown()
     }
 

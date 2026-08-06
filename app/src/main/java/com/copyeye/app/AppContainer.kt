@@ -3,6 +3,7 @@ package com.copyeye.app
 import android.app.Application
 import android.content.Context
 import com.copyeye.app.capture.MediaProjectionController
+import com.copyeye.app.capture.shizuku.ShizukuCaptureSource
 import com.copyeye.app.clipboard.ClipboardHistoryRepository
 import com.copyeye.app.clipboard.ClipboardWriter
 import com.copyeye.app.core.common.DeviceCapabilities
@@ -48,6 +49,12 @@ class AppContainer(private val application: Application) {
     val projectionController: MediaProjectionController by lazy {
         MediaProjectionController(context)
     }
+
+    /**
+     * The optional shell-privileged capture path. Constructing it is cheap and does not touch
+     * Shizuku, so it is safe to hold on a device that has never heard of it.
+     */
+    val shizukuCaptureSource: ShizukuCaptureSource by lazy { ShizukuCaptureSource(context) }
 
     val textRecognitionEngine: TextRecognitionEngine by lazy { MlKitTextRecognitionEngine() }
 

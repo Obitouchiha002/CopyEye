@@ -31,6 +31,13 @@
     <!-- Short taps for scan start, text ready and copy complete. -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!--
+      Optional. Lets a user who has set Shizuku up capture without a consent dialog and without a
+      screen-recording indicator. Absent Shizuku, this permission is simply never granted and the
+      app uses the public screen-capture API instead.
+    -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
     <application
         android:name=".CopyEyeApp"
         android:allowBackup="false"
@@ -88,6 +95,15 @@
                     held in this state; the service switches to the mediaProjection type only while
                     a user-initiated scan is running." />
         </service>
+
+        <!-- Shizuku discovers the app through this provider. It holds no data of its own. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
     </application>
 

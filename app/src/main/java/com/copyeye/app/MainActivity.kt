@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.copyeye.app.core.common.ApiLevel
+import com.copyeye.app.data.preferences.ProjectionIdleTimeout
 import com.copyeye.app.overlay.FloatingEyeService
 import com.copyeye.app.ui.nav.CopyEyeNavHost
 import com.copyeye.app.ui.nav.Route
@@ -152,12 +153,25 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Puts the eye on screen. Deliberately asks for no screen access: CopyEye gets that only when
-     * the user taps Iris, and gives it straight back afterwards.
+     * Puts the eye on screen.
+     *
+     * When the user has chosen to keep the capture session (the default), consent is asked for here
+     * — once, at the moment they switch CopyEye on — so that every later tap scans instantly. When
+     * they have chosen to release it after each scan, the eye starts with no screen access at all
+     * and the dialog waits until they actually ask for a scan.
      */
     private fun startFloatingEye() {
         requestNotificationPermission()
-        ContextCompat.startForegroundService(this, FloatingEyeService.eyeOnlyIntent(this))
+        lifecycleScope.launch {
+            val keepsSession =
+                container.settingsRepository.settings.first().projectionIdleTimeout ==
+                    ProjectionIdleTimeout.Never
+            if (keepsSession) {
+                requestCapturePermission()
+            } else {
+                ContextCompat.startForegroundService(this@MainActivity, FloatingEyeService.eyeOnlyIntent(this@MainActivity))
+            }
+        }
     }
 
     private fun stopFloatingEye() {
