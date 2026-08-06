@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Compose supplies all the real styling. These themes only set what has to exist before the
+      first frame: the window background (so there is no white flash on a dark device) and, for the
+      scan overlay, transparency.
+    -->
+    <style name="Theme.CopyEye" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.CopyEye.Scan" parent="Theme.CopyEye">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <!-- No enter or exit animation: the frozen frame must appear exactly where the real
+             screen was, with nothing sliding into place. -->
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

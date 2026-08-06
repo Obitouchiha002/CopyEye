@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      There is deliberately no INTERNET permission. CopyEye reads screens; giving it a network
+      channel at all would make "nothing is uploaded" a promise rather than a fact.
+      There is also no CAMERA, RECORD_AUDIO or location permission, and none is needed.
+    -->
+
+    <!-- Draws the floating eye above other apps. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Keeps the screen-capture session alive with a visible, stoppable notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
+    <!-- The ongoing notification is how the user stops CopyEye, so it is worth asking for. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Short taps for scan start, text ready and copy complete. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".CopyEyeApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CopyEye"
+        tools:targetApi="34">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.CopyEye"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          The selection overlay.
+
+          `excludeFromRecents` and `noHistory` keep it out of the user's task list: it is a
+          momentary tool, and finding a stale screenshot of a banking app in Recents would be
+          exactly the wrong outcome. `singleInstance` guarantees a second scan replaces the first
+          rather than stacking.
+        -->
+        <activity
+            android:name=".selection.ScanActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.CopyEye.Scan"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!--
+          `configChanges` is what lets the service follow a rotation by resizing the existing
+          virtual display; from Android 14 a second `createVirtualDisplay` call is not permitted.
+        -->
+        <service
+            android:name=".overlay.FloatingEyeService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+    </application>
+
+</manifest>

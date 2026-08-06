@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing CopyEye stores is backed up. Settings are trivial to set again; clipboard history is
+  whatever happened to be on the user's screen, which is exactly the kind of thing that should not
+  travel to a new device inside a backup.
+-->
+<full-backup-content>
+    <exclude domain="file" />
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+</full-backup-content>

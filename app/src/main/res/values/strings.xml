@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CopyEye</string>
+
+    <!-- Foreground service notification -->
+    <string name="notification_channel_name">CopyEye is running</string>
+    <string name="notification_channel_description">Shown while CopyEye can read your screen. Tapping Stop removes that access immediately.</string>
+    <string name="notification_title">CopyEye</string>
+    <string name="notification_ready">Tap the eye to scan. Your screen is only read when you tap.</string>
+    <string name="notification_paused">Paused — the eye is hidden.</string>
+    <string name="notification_no_capture">Screen reading is off. Open CopyEye to turn it back on.</string>
+    <string name="notification_action_scan">Scan</string>
+    <string name="notification_action_pause">Pause</string>
+    <string name="notification_action_resume">Resume</string>
+    <string name="notification_action_stop">Stop</string>
+
+    <!-- Errors -->
+    <string name="error_overlay_denied">CopyEye needs permission to draw over other apps before the eye can appear.</string>
+    <string name="error_capture_denied">Screen reading was declined, so CopyEye cannot scan.</string>
+    <string name="error_capture_unavailable">This device does not offer screen capture.</string>
+    <string name="error_notifications_denied">Without notification permission you will not see the badge that lets you stop CopyEye quickly.</string>
+    <string name="error_no_settings_screen">This phone does not have that settings screen.</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_floating_eye">CopyEye floating scan button</string>
+</resources>
