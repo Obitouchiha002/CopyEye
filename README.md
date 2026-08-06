@@ -146,8 +146,10 @@ edit-before-copy and smart actions are also implemented.
 No accounts, no cloud sync, no ads, no subscriptions, no analytics. See
 [Known limitations](docs/LIMITATIONS.md) for what is deliberately not here.
 
-**Not yet run on hardware.** The project builds, passes 84 unit tests and passes lint with zero
-errors, but nothing in it has been executed on a device or emulator. The instrumentation tests
-compile but have not been run. Work through the device matrix in
-[Known limitations](docs/LIMITATIONS.md#device-matrix-to-work-through-before-release) before
+**Run once on an Android 14 emulator.** The end-to-end flow works there — eye, capture, OCR, accurate
+text outlines, and screen access held only during a scan. The **sub-one-second scan target is
+unverified**: an x86_64 emulator runs ML Kit through a software path that is orders of magnitude
+slower than an ARM phone, so it cannot answer that question. Measure it on a real device, and work
+through the matrix in
+[Known limitations](docs/LIMITATIONS.md#device-matrix-to-work-through-before-release), before
 shipping.

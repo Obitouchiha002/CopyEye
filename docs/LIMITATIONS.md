@@ -13,11 +13,11 @@ Apps that set `FLAG_SECURE` — banking apps, DRM video players, some password m
 the system UI — are composited into a media projection as solid black. CopyEye detects the blank
 frame and says so. It does not try to work around the protection, and there is no setting that does.
 
-### Android asks for screen permission on every start
+### Screen-capture consent cannot be remembered
 
-From Android 14, screen-capture consent is per-session and cannot be remembered. CopyEye holds one
-session for as long as it is running, so the dialog appears once per start rather than once per scan
-— but stopping CopyEye, or Android stopping it, means the next start asks again.
+From Android 14, consent is per-session and an app may not cache or reuse a grant. Since CopyEye
+releases its session as soon as it has a frame, the dialog appears on each scan by default. Keeping
+the session for 15 seconds to 3 minutes (Scan settings) makes a burst of scans cost one dialog.
 
 ### The screen-recording indicator during a scan, and the dialog that buys its absence
 
@@ -119,11 +119,24 @@ Using ML Kit's unbundled (`play-services-mlkit-*`) variants would cut this to a 
 cost of requiring Google Play Services and a first-run model download. The bundled models were chosen
 so recognition works offline on any device.
 
-### Not yet tested on hardware
+### What has and has not been verified on a device
 
-This build compiles, passes 84 unit tests and passes lint with zero errors, but it has not been run
-on a physical device or emulator in this session. The instrumentation tests are written and compile
-but have not been executed. Before shipping, work through the device matrix in the next section.
+Run on an **Android 14 (API 34) x86_64 emulator**, 1080x2340. Confirmed working there:
+
+- onboarding, Home, and both permission flows
+- the floating eye: drawing, dragging, edge snap, auto-dim and edge peek
+- a scan end to end — capture, frozen frame, scan wave, recognition of both scripts, and text
+  outlines landing accurately on the real glyph positions
+- the service holding `types=40000000` (no screen access) while idle, `types=20` only during a
+  capture, and no recording indicator on the status bar at rest
+
+**Not verified: the sub-one-second scan target.** ML Kit on an x86_64 emulator has no NEON and falls
+back to a software TFLite path; model warm-up alone measured 25–100 seconds there, and per-scan
+recognition is similarly pathological. Those numbers say nothing about an ARM phone and should not be
+quoted. The scan budget has to be measured on real hardware before any claim is made about it.
+
+Also unverified: everything in the device matrix below, and the instrumentation tests, which compile
+but have not been executed.
 
 ---
 
