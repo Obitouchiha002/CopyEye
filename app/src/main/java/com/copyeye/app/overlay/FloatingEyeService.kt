@@ -598,8 +598,11 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         val channel = NotificationChannel(
             CHANNEL_ID,
             getString(R.string.notification_channel_name),
-            // Low importance: the notification must be visible and actionable, never intrusive.
-            NotificationManager.IMPORTANCE_LOW,
+            // Minimum importance keeps the notification out of the status bar entirely: it lives
+            // collapsed at the bottom of the shade instead. Android will not let a foreground
+            // service run without a notification at all — that is the deal for keeping the eye
+            // alive for hours — but it does not have to occupy a slot the user looks at all day.
+            NotificationManager.IMPORTANCE_MIN,
         ).apply {
             description = getString(R.string.notification_channel_description)
             setShowBadge(false)

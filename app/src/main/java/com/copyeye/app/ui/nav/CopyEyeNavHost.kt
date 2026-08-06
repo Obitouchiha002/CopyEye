@@ -63,6 +63,8 @@ fun CopyEyeNavHost(
                 container = container,
                 onRequestOverlayPermission = onRequestOverlayPermission,
                 onRequestCapturePermission = onStartService,
+                onRequestNotificationPermission = onRequestNotificationPermission,
+                onOpenSystemIntent = onOpenSystemIntent,
                 onFinished = {
                     navController.navigate(Route.Home.path) {
                         popUpTo(Route.Onboarding.path) { inclusive = true }
@@ -75,6 +77,8 @@ fun CopyEyeNavHost(
             HomeScreen(
                 container = container,
                 onRequestOverlayPermission = onRequestOverlayPermission,
+                onRequestNotificationPermission = onRequestNotificationPermission,
+                onOpenSystemIntent = onOpenSystemIntent,
                 onStartService = onStartService,
                 onStopService = onStopService,
                 onNavigate = { route -> navController.navigate(route.path) },

@@ -34,6 +34,8 @@ import com.copyeye.app.core.state.CopyEyeBus
 import com.copyeye.app.ui.theme.IrisViolet
 import kotlinx.coroutines.launch
 
+private const val PERMISSIONS_PAGE = 1
+
 private data class OnboardingPage(
     val title: String,
     val body: String,
@@ -41,18 +43,21 @@ private data class OnboardingPage(
 )
 
 /**
- * Five screens, in the order the user needs them.
+ * Four screens, in the order the user needs them.
  *
- * The two permission pages are separated on purpose. Asking for "display over other apps" and
- * "record your screen" in one breath reads as an app that wants everything; asking one at a time,
- * each next to the sentence explaining what it buys, is the difference between a grant and an
- * uninstall.
+ * Permissions are one page, not several. An earlier version walked the user through them one at a
+ * time, which read well but hid the thing that actually matters: whether each one worked. Two of
+ * these steps hand control to another app and return no result, so a checklist that is still on
+ * screen when the user comes back — with a tick or without one — is the only design that tells the
+ * truth about where they stand.
  */
 @Composable
 fun OnboardingScreen(
     container: AppContainer,
     onRequestOverlayPermission: () -> Unit,
     onRequestCapturePermission: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onOpenSystemIntent: (android.content.Intent) -> Unit,
     onFinished: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -66,18 +71,9 @@ fun OnboardingScreen(
                     "you can see the text, CopyEye can copy it.",
                 actionLabel = null,
             ),
-            OnboardingPage(
-                title = "A small eye that floats",
-                body = "Iris sits at the edge of your screen, above whatever you are using. " +
-                    "Android calls this \"Display over other apps\".",
-                actionLabel = "Allow floating eye",
-            ),
-            OnboardingPage(
-                title = "Screen reading, only on tap",
-                body = "CopyEye asks Android for permission to read the screen. Nothing is read " +
-                    "until you tap the eye — not before, not in between.",
-                actionLabel = "Allow screen reading",
-            ),
+            // Index 1 is the permission checklist, rendered by PermissionsPage rather than by
+            // the generic page body.
+            OnboardingPage(title = "", body = "", actionLabel = null),
             OnboardingPage(
                 title = "Everything stays on your phone",
                 body = "Text recognition runs on this device. Captured screens are never uploaded " +
@@ -106,6 +102,21 @@ fun OnboardingScreen(
                 .weight(1f)
                 .fillMaxWidth(),
         ) { index ->
+            // if/else rather than an early return: a non-local return out of a composable lambda
+            // leaves Compose's group structure inconsistent, which shows up as a blank page.
+            if (index == PERMISSIONS_PAGE) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PermissionsPage(
+                        permissions = container.permissionChecker,
+                        onRequestOverlay = onRequestOverlayPermission,
+                        onRequestNotifications = onRequestNotificationPermission,
+                        onOpenSystemIntent = onOpenSystemIntent,
+                    )
+                }
+            } else {
             val page = pages[index]
             Column(
                 modifier = Modifier
@@ -138,14 +149,9 @@ fun OnboardingScreen(
                 )
                 if (page.actionLabel != null) {
                     Spacer(Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            if (index == 1) onRequestOverlayPermission() else onRequestCapturePermission()
-                        },
-                    ) {
-                        Text(page.actionLabel)
-                    }
+                    Button(onClick = onRequestCapturePermission) { Text(page.actionLabel) }
                 }
+            }
             }
         }
 

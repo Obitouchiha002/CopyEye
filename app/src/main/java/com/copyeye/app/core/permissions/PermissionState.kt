@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -69,6 +70,81 @@ class PermissionChecker(context: Context) {
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /**
+     * True on the OEM skins that add a background-pop-up permission on top of Android's own
+     * "display over other apps".
+     *
+     * Android has no API for reading that permission, so the only honest thing to do is name the
+     * phones it exists on and walk the user to it. Getting this wrong in the harmless direction —
+     * showing the step to someone who does not need it — costs one tap; getting it wrong the other
+     * way leaves them with a button that does nothing.
+     */
+    val needsOemPopupPermission: Boolean
+        get() = Build.MANUFACTURER.lowercase() in OEMS_WITH_POPUP_PERMISSION ||
+            Build.BRAND.lowercase() in OEMS_WITH_POPUP_PERMISSION
+
+    /** Human-readable path to that setting, for the OEM this phone actually is. */
+    val oemPopupPermissionPath: String
+        get() = when (Build.MANUFACTURER.lowercase()) {
+            "xiaomi", "redmi", "poco" ->
+                "Settings → Apps → Manage apps → CopyEye → Other permissions → " +
+                    "\"Display pop-up windows while running in background\""
+            "oppo", "realme", "oneplus" ->
+                "Settings → Apps → CopyEye → Allow floating windows / Auto-launch"
+            "vivo", "iqoo" ->
+                "Settings → Apps → CopyEye → Permissions → \"Display pop-up windows while running " +
+                    "in the background\""
+            else -> "Settings → Apps → CopyEye → Other permissions → background pop-up windows"
+        }
+
+    /**
+     * Best effort at opening the OEM's own permission editor, falling back to the standard app
+     * details page — which every device has, even if it takes the user one more tap from there.
+     */
+    fun oemPopupPermissionIntent(): Intent {
+        val candidates = listOf(
+            Intent("miui.intent.action.APP_PERM_EDITOR")
+                .setClassName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.permissions.PermissionsEditorActivity",
+                )
+                .putExtra("extra_pkgname", appContext.packageName),
+            Intent().setClassName(
+                "com.coloros.safecenter",
+                "com.coloros.safecenter.permission.floatwindow.FloatWindowListActivity",
+            ),
+            Intent().setClassName(
+                "com.vivo.permissionmanager",
+                "com.vivo.permissionmanager.activity.PurviewTabActivity",
+            ),
+        )
+        val resolvable = candidates.firstOrNull { intent ->
+            appContext.packageManager.resolveActivity(intent, 0) != null
+        }
+        return (resolvable ?: appSettingsIntent()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    /** MIUI and friends also gate service restarts behind an "autostart" toggle. */
+    fun autostartIntent(): Intent? {
+        val candidates = listOf(
+            Intent().setClassName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity",
+            ),
+            Intent().setClassName(
+                "com.coloros.safecenter",
+                "com.coloros.safecenter.startupapp.StartupAppListActivity",
+            ),
+            Intent().setClassName(
+                "com.vivo.permissionmanager",
+                "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+            ),
+        )
+        return candidates
+            .firstOrNull { appContext.packageManager.resolveActivity(it, 0) != null }
+            ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    /**
      * The battery-optimisation exemption screen.
      *
      * CopyEye does not request the exemption programmatically — Play policy reserves that for a
@@ -78,4 +154,10 @@ class PermissionChecker(context: Context) {
     fun batteryOptimisationSettingsIntent(): Intent =
         Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    private companion object {
+        val OEMS_WITH_POPUP_PERMISSION = setOf(
+            "xiaomi", "redmi", "poco", "oppo", "realme", "oneplus", "vivo", "iqoo",
+        )
+    }
 }

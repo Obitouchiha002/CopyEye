@@ -52,6 +52,8 @@ import com.copyeye.app.ui.theme.WarnAmber
 fun HomeScreen(
     container: AppContainer,
     onRequestOverlayPermission: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onOpenSystemIntent: (android.content.Intent) -> Unit,
     onStartService: () -> Unit,
     onStopService: () -> Unit,
     onNavigate: (Route) -> Unit,
@@ -86,6 +88,20 @@ fun HomeScreen(
                     OutlinedButton(onClick = onStopService, modifier = Modifier.fillMaxWidth()) {
                         Text("Stop CopyEye")
                     }
+                }
+            }
+
+            // The checklist stays on Home until everything is in place. A permission that was
+            // never granted is the single most common reason this app appears broken, and it must
+            // not be something the user has to go looking for.
+            if (!canDrawOverlays || !serviceRunning) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    com.copyeye.app.feature.onboarding.PermissionsPage(
+                        permissions = container.permissionChecker,
+                        onRequestOverlay = onRequestOverlayPermission,
+                        onRequestNotifications = onRequestNotificationPermission,
+                        onOpenSystemIntent = onOpenSystemIntent,
+                    )
                 }
             }
 
