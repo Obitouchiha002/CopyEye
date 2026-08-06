@@ -52,12 +52,11 @@ import com.copyeye.app.ui.theme.WarnAmber
 fun HomeScreen(
     container: AppContainer,
     onRequestOverlayPermission: () -> Unit,
-    onRequestCapturePermission: () -> Unit,
+    onStartService: () -> Unit,
     onStopService: () -> Unit,
     onNavigate: (Route) -> Unit,
 ) {
     val serviceRunning by CopyEyeBus.serviceRunning.collectAsStateWithLifecycle()
-    val projectionActive by CopyEyeBus.projectionActive.collectAsStateWithLifecycle()
     val canDrawOverlays = container.permissionChecker.canDrawOverlays()
 
     Scaffold(
@@ -69,23 +68,15 @@ fun HomeScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            StatusCard(
-                running = serviceRunning && projectionActive,
-                canDrawOverlays = canDrawOverlays,
-                projectionActive = projectionActive,
-            )
+            StatusCard(running = serviceRunning, canDrawOverlays = canDrawOverlays)
 
             Spacer(Modifier.height(8.dp))
 
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                if (!serviceRunning || !projectionActive) {
+                if (!serviceRunning) {
                     Button(
                         onClick = {
-                            if (!canDrawOverlays) {
-                                onRequestOverlayPermission()
-                            } else {
-                                onRequestCapturePermission()
-                            }
+                            if (canDrawOverlays) onStartService() else onRequestOverlayPermission()
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -159,11 +150,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun StatusCard(running: Boolean, canDrawOverlays: Boolean, projectionActive: Boolean) {
+private fun StatusCard(running: Boolean, canDrawOverlays: Boolean) {
     val (title, body, tint) = when {
         running -> Triple(
             "CopyEye is on",
-            "Tap Iris at the edge of your screen to scan. Drag to move it.",
+            "Tap Iris at the edge of your screen to scan. Drag to move it. CopyEye has no access " +
+                "to your screen until you tap.",
             SuccessGreen,
         )
         !canDrawOverlays -> Triple(
@@ -171,13 +163,11 @@ private fun StatusCard(running: Boolean, canDrawOverlays: Boolean, projectionAct
             "Android needs permission to draw CopyEye over other apps.",
             WarnAmber,
         )
-        !projectionActive -> Triple(
-            "Screen reading is off",
-            "Android asks for screen-reading permission each time CopyEye starts. That is the " +
-                "system's rule, not ours.",
+        else -> Triple(
+            "CopyEye is off",
+            "Turn it on to start copying text from your screen.",
             WarnAmber,
         )
-        else -> Triple("CopyEye is off", "Turn it on to start copying text from your screen.", WarnAmber)
     }
 
     Surface(

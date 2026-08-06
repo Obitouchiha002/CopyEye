@@ -15,6 +15,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
+    <!--
+      The service spends nearly all its life holding nothing but a floating window: no capture
+      session, no screen access. Android still requires a foreground service to keep that window
+      alive, and it must declare a type. `specialUse` is that idle type; the service switches to
+      `mediaProjection` only for the moment a scan is actually running, and switches straight back.
+
+      This is what lets CopyEye run all day without a screen-recording indicator on the status bar.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- The ongoing notification is how the user stops CopyEye, so it is worth asking for. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -71,7 +81,13 @@
         <service
             android:name=".overlay.FloatingEyeService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+            android:foregroundServiceType="mediaProjection|specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the user's floating scan button on screen. No screen access is
+                    held in this state; the service switches to the mediaProjection type only while
+                    a user-initiated scan is running." />
+        </service>
 
     </application>
 

@@ -73,6 +73,7 @@ class SettingsRepository(context: Context) {
         val scripts = stringSetPreferencesKey("ocr_scripts")
         val ocrMode = stringPreferencesKey("ocr_mode")
         val smartFrame = booleanPreferencesKey("smart_frame_mode")
+        val projectionIdle = stringPreferencesKey("projection_idle_timeout")
         val autoCopySingle = booleanPreferencesKey("auto_copy_single_line")
         val closeAfterCopy = booleanPreferencesKey("close_after_copy")
         val closeDelay = longPreferencesKey("close_after_copy_delay_ms")
@@ -113,6 +114,7 @@ class SettingsRepository(context: Context) {
                 ?: defaults.scripts,
             ocrMode = prefs[Keys.ocrMode].toEnum(defaults.ocrMode),
             smartFrameMode = prefs[Keys.smartFrame] ?: defaults.smartFrameMode,
+            projectionIdleTimeout = prefs[Keys.projectionIdle].toEnum(defaults.projectionIdleTimeout),
             autoCopySingleLine = prefs[Keys.autoCopySingle] ?: defaults.autoCopySingleLine,
             closeAfterCopy = prefs[Keys.closeAfterCopy] ?: defaults.closeAfterCopy,
             closeAfterCopyDelayMs = prefs[Keys.closeDelay]?.coerceIn(0L, 5_000L) ?: defaults.closeAfterCopyDelayMs,
@@ -148,6 +150,7 @@ class SettingsRepository(context: Context) {
         prefs[Keys.scripts] = s.scripts.map { it.name }.toSet()
         prefs[Keys.ocrMode] = s.ocrMode.name
         prefs[Keys.smartFrame] = s.smartFrameMode
+        prefs[Keys.projectionIdle] = s.projectionIdleTimeout.name
         prefs[Keys.autoCopySingle] = s.autoCopySingleLine
         prefs[Keys.closeAfterCopy] = s.closeAfterCopy
         prefs[Keys.closeDelay] = s.closeAfterCopyDelayMs

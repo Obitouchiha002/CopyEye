@@ -123,31 +123,54 @@ But a long-lived virtual display rendering into an `ImageReader` means the compo
 frames of the user's screen continuously, whether or not anyone reads them. "We only read the buffer
 when you tap" is a much weaker claim than the product should be making.
 
-**The resolution: gate the surface, not the read.**
+**The resolution: hold no session at all except during a scan.**
+
+The first version of this kept one session alive for the whole time CopyEye was on, and gated the
+*surface* instead — idle meant a virtual display with no surface, producing no frames. That was
+correct, and it was not enough. Android shows a screen-recording indicator for as long as a session
+*exists*, regardless of whether any frame is produced, and no app may suppress it. Users read a
+permanent recording indicator as "this app is watching me", and they are not wrong to be cautious.
+
+So the session is now as short-lived as the scan:
 
 ```
   CopyEye ON
+      │                                          ← foreground service, type specialUse
+      ├─ floating eye on screen                     NO projection, NO indicator
       │
-      ├─ createVirtualDisplay(surface = null)   ← display exists, renders nowhere
-      │
-      │   idle …                                ← zero frames produced, zero cost
+      │   idle, for hours …                      ← zero screen access of any kind
       │
       ├─ user taps Iris
-      │     ├─ virtualDisplay.setSurface(imageReader.surface)
+      │     ├─ consent dialog (Android's; unavoidable per session)
+      │     ├─ startForeground(TYPE_MEDIA_PROJECTION)   ← required before the next line
+      │     ├─ getMediaProjection(result)
+      │     ├─ createVirtualDisplay(surface = imageReader.surface)
       │     ├─ await first frame  (timeout 2.5 s)
       │     ├─ Image → Bitmap, cropping the row-stride padding
-      │     └─ virtualDisplay.setSurface(null)   ← back to producing nothing
+      │     ├─ projection.stop()                       ← indicator disappears here
+      │     └─ startForeground(TYPE_SPECIAL_USE)       ← back to eye-only
       │
-      │   idle …
+      │   OCR and selection run on the bitmap    ← no screen access needed any more
       │
-      ├─ rotation / split-screen
-      │     └─ virtualDisplay.resize(w, h, dpi)  ← never a second createVirtualDisplay
-      │
-      └─ CopyEye OFF  →  setSurface(null), release, projection.stop()
+      └─ CopyEye OFF  →  service stops, overlay removed
 ```
 
-Between scans, no frame of the user's screen is produced at all. That is a structural property of the
-pipeline rather than a discipline the code has to maintain.
+Screen access exists only between the consent dialog and the frame landing in memory — a few hundred
+milliseconds. Everything after that, including recognition and the whole selection session, works on
+a bitmap.
+
+**The two foreground-service types.** Android requires a foreground service to keep an overlay alive
+for hours, and requires that service to declare a type. `mediaProjection` cannot be the idle type —
+it is what raises the indicator. So the service declares `mediaProjection|specialUse` and calls
+`startForeground` with whichever applies: `specialUse` at rest, `mediaProjection` for the moment a
+scan needs it. `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` in the manifest states why.
+
+**The cost, stated plainly.** A fresh session needs fresh consent, so Android's dialog appears on
+each scan that starts from a released session. `ProjectionIdleTimeout` lets the user trade that back:
+`Immediately` (the default) means no indicator between scans and a dialog each time;
+`15 seconds`/`1 minute`/`3 minutes` keep the session briefly so a burst of scans costs one dialog;
+`Never` keeps it for the session and accepts the permanent indicator. Tapping Iris with no session
+raises the dialog and then scans, so it stays one gesture either way.
 
 `MediaProjection.Callback.onStop` fires when the user revokes capture from the system UI or another
 app takes the projection. CopyEye tears down, updates the notification, and the next tap routes the
@@ -232,8 +255,8 @@ ScreenFrame (raw capture, e.g. 1080 × 2400)
    │    └─ record offset + scale on the frame, for the inverse mapping
    │
    ├─ MlKitTextRecognitionEngine.recognize
-   │    ├─ Latin recogniser        ┐ run concurrently on the same InputImage;
-   │    └─ Devanagari recogniser   ┘ wall clock ≈ the slower one, not the sum
+   │    ├─ Latin recogniser        ┐ run in sequence, each on its own InputImage,
+   │    └─ Devanagari recogniser   ┘ emitting a merged result after each
    │
    ├─ merge
    │    ├─ dedupe lines by IoU > 0.55, keeping the longer text
@@ -249,6 +272,20 @@ ScreenFrame (raw capture, e.g. 1080 × 2400)
 Two recognisers rather than one because ML Kit has no combined Latin + Devanagari model, and the
 screens this app exists for — a Hindi caption over an English interface — need both. The merge is
 what stops the same English button label appearing twice.
+
+**They cost the sum, not the maximum.** An earlier version launched both with `async` and assumed the
+wall-clock cost would be the slower of the two. A device trace showed otherwise: ML Kit dispatches
+every recognition onto one shared internal worker, so the second call simply queues behind the first.
+Recognition is therefore a `Flow` that emits after each script — English text is selectable while the
+Devanagari pass is still running. The total is unchanged; the wait is halved.
+
+Each recogniser also gets its own `InputImage`. Sharing one made ML Kit's native side lock and unlock
+the same pixel buffer twice, which it reported as `Failed to unlock pixels for bitmap`.
+
+**Model loading is warmed off the critical path.** ML Kit does not touch its models until the first
+`process` call, and that first call is expensive — seconds, not milliseconds. `warmUp` runs a 32x32
+throwaway image through each recogniser when the app is opened and again when the service starts, so
+the cost lands while the user is granting permissions rather than on their first tap.
 
 Both models are bundled into the APK (`com.google.mlkit:text-recognition*`, not the Play-Services
 variants), so recognition works offline on a device with no Google Play Services.

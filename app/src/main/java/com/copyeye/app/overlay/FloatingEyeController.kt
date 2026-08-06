@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -21,6 +22,9 @@ import com.copyeye.app.core.common.Haptics
 import com.copyeye.app.core.state.CopyEyeState
 import com.copyeye.app.core.state.CopyEyeStateMachine
 import com.copyeye.app.data.preferences.AppSettings
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Everything that happens in the overlay window: drawing Iris, moving her, dimming her, and
@@ -178,6 +182,35 @@ class FloatingEyeController(
     fun setEyeVisible(visible: Boolean) {
         if (!attached) return
         eyeView.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Hides the eye and waits until that hide has actually reached the screen.
+     *
+     * Setting `visibility` is synchronous, but the compositor is not: the window keeps being drawn
+     * until the next frame is composed. Grabbing a capture immediately after hiding therefore
+     * catches Iris inside her own screenshot — visibly, over the text the user is trying to read.
+     *
+     * Two frames rather than one, because the first only guarantees the hide was *submitted*.
+     * At 60 Hz this costs about 33 ms; the timeout stops a stalled compositor from blocking a scan
+     * forever.
+     */
+    suspend fun hideEyeForCapture() {
+        if (!attached || eyeView.visibility == View.GONE) return
+        eyeView.visibility = View.GONE
+        withTimeoutOrNull(COMPOSITE_WAIT_TIMEOUT_MS) {
+            repeat(FRAMES_TO_AWAIT) { awaitFrame() }
+        }
+    }
+
+    private suspend fun awaitFrame() = suspendCancellableCoroutine { continuation ->
+        val callback = Choreographer.FrameCallback {
+            if (continuation.isActive) continuation.resume(Unit)
+        }
+        Choreographer.getInstance().postFrameCallback(callback)
+        continuation.invokeOnCancellation {
+            Choreographer.getInstance().removeFrameCallback(callback)
+        }
     }
 
     fun setMood(mood: IrisEyeView.Mood) {
@@ -610,5 +643,7 @@ class FloatingEyeController(
         const val REMOVE_TARGET_BOTTOM_DP = 48
         const val QUICK_MENU_WIDTH_DP = 210
         const val QUICK_MENU_HEIGHT_DP = 340
+        const val FRAMES_TO_AWAIT = 2
+        const val COMPOSITE_WAIT_TIMEOUT_MS = 250L
     }
 }

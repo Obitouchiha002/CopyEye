@@ -12,6 +12,7 @@ import com.copyeye.app.core.common.Hap
 import com.copyeye.app.core.state.CopyEyeError
 import com.copyeye.app.core.state.CopyEyeBus
 import com.copyeye.app.core.state.CopyEyeEvent
+import com.copyeye.app.core.state.ScanTiming
 import com.copyeye.app.data.preferences.AppSettings
 import com.copyeye.app.ocr.OcrResult
 import com.copyeye.app.ocr.OcrUnavailableException
@@ -67,8 +68,26 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
             val image = captured.bitmap.asImageBitmap()
             _uiState.value = ScanUiState.Scanning(image)
 
-            val result = try {
-                container.textRecognitionEngine.recognize(captured, settings.scripts)
+            // Results arrive per script. The first emission ends the scanning animation, so the
+            // user can start selecting English text while the Devanagari pass is still running.
+            var emissions = 0
+            try {
+                container.textRecognitionEngine
+                    .recognizeProgressive(captured, settings.scripts)
+                    .collect { result ->
+                        emissions++
+                        if (result.isEmpty) return@collect
+
+                        if (emissions == 1 || _uiState.value !is ScanUiState.Ready) {
+                            ScanTiming.complete(
+                                ocrMs = result.elapsedMs,
+                                lineCount = result.lines.size,
+                                warm = container.textRecognitionEngine.isWarm,
+                            )
+                            container.haptics.play(Hap.TextReady)
+                        }
+                        onResult(result, image, regionMode)
+                    }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: OcrUnavailableException) {
@@ -81,34 +100,54 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            if (result.isEmpty) {
+            if (_uiState.value !is ScanUiState.Ready) {
                 _uiState.value = ScanUiState.NoText(image)
                 CopyEyeBus.emit(CopyEyeEvent.NoTextFound)
-                return@launch
             }
+        }
+    }
 
-            container.haptics.play(Hap.TextReady)
-            val selectionEngine = SelectionEngine(result)
-            engine = selectionEngine
+    /**
+     * Applies one recognition result.
+     *
+     * A later script adding lines must not disturb what the user has already chosen, so the
+     * existing selection is carried across by re-resolving it against the new engine rather than
+     * being reset.
+     */
+    private fun onResult(
+        result: OcrResult,
+        image: androidx.compose.ui.graphics.ImageBitmap,
+        regionMode: Boolean,
+    ) {
+        val previous = _uiState.value as? ScanUiState.Ready
+        val selectionEngine = SelectionEngine(result)
+        engine = selectionEngine
 
-            // A screen with exactly one line of text is almost always a caption or a code — there
-            // is nothing to choose between, so the setting lets the user skip the choosing.
-            val autoSelection = if (settings.autoCopySingleLine && selectionEngine.hasSingleLine) {
-                selectionEngine.selectAll()
+        val selection = when {
+            previous != null && !previous.selection.isEmpty ->
+                // Word references are (lineId, index) pairs and line ids are stable within a scan,
+                // so a selection made against the first result still resolves against the second.
+                previous.selection
+            settings.autoCopySingleLine && selectionEngine.hasSingleLine -> selectionEngine.selectAll()
+            else -> Selection()
+        }
+
+        _uiState.value = ScanUiState.Ready(
+            frame = image,
+            result = result,
+            selection = selection,
+            mode = previous?.mode ?: SelectionMode.Line,
+            smartActions = if (selection.isEmpty) {
+                emptyList()
             } else {
-                Selection()
-            }
+                SmartActionDetector.detect(selectionEngine.textOf(selection))
+            },
+            regionMode = previous?.regionMode ?: regionMode,
+            justCopied = previous?.justCopied ?: false,
+        )
 
-            _uiState.value = ScanUiState.Ready(
-                frame = image,
-                result = result,
-                selection = autoSelection,
-                mode = SelectionMode.Line,
-                smartActions = emptyList(),
-                regionMode = regionMode,
-            )
-
-            if (!autoSelection.isEmpty) copySelection(closeAfter = true)
+        if (previous == null && !selection.isEmpty && settings.autoCopySingleLine) {
+            copySelection(closeAfter = true)
         }
     }
 

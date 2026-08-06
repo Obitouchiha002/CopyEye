@@ -11,11 +11,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.copyeye.app.core.common.ApiLevel
 import com.copyeye.app.overlay.FloatingEyeService
 import com.copyeye.app.ui.nav.CopyEyeNavHost
 import com.copyeye.app.ui.nav.Route
 import com.copyeye.app.ui.theme.CopyEyeTheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * The app's own window: onboarding, the on/off switch, settings, history and help.
@@ -29,16 +32,29 @@ class MainActivity : ComponentActivity() {
     private val container: AppContainer
         get() = (application as CopyEyeApp).container
 
+    /** True when this consent request came from a tap on Iris after the session had lapsed. */
+    private var scanAfterGrant = false
+
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         val data = result.data
+        val reconnecting = scanAfterGrant
+        scanAfterGrant = false
         if (result.resultCode == RESULT_OK && data != null) {
             // The consent result goes straight to the service. On Android 14+ the foreground
             // service has to be the thing that calls getMediaProjection, and it must do so with a
             // result that has never been used before.
-            val intent = FloatingEyeService.startIntent(this, result.resultCode, data)
+            val intent = FloatingEyeService.startIntent(
+                context = this,
+                resultCode = result.resultCode,
+                data = data,
+                scanImmediately = reconnecting,
+            )
             ContextCompat.startForegroundService(this, intent)
+            // A reconnect is a detour the user did not ask for, so get out of their way and let
+            // the scan land on whatever they were actually looking at.
+            if (reconnecting) finish()
         } else {
             toast(getString(R.string.error_capture_denied))
         }
@@ -62,6 +78,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Start loading the OCR models the moment the app is opened, not when the service starts.
+        // Model initialisation is by far the largest single cost in a cold scan, and the user is
+        // about to spend several seconds granting two permissions — which is free time to spend on
+        // it. By the time they first tap Iris the engine is usually already warm.
+        lifecycleScope.launch {
+            val scripts = container.settingsRepository.settings.first().scripts
+            container.textRecognitionEngine.warmUp(scripts)
+        }
+
         setContent {
             CopyEyeTheme {
                 CopyEyeNavHost(
@@ -70,16 +95,31 @@ class MainActivity : ComponentActivity() {
                     onRequestOverlayPermission = ::requestOverlayPermission,
                     onRequestCapturePermission = ::requestCapturePermission,
                     onRequestNotificationPermission = ::requestNotificationPermission,
+                    onStartService = ::startFloatingEye,
                     onStopService = ::stopFloatingEye,
                     onOpenSystemIntent = ::launchSystemIntent,
                 )
             }
         }
+
+        maybeReconnect(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        maybeReconnect(intent)
+    }
+
+    /**
+     * Tapping Iris after the idle session was released routes here. The dialog is raised straight
+     * away rather than showing Home first — the user has already expressed what they want by
+     * tapping, and asking them to press a second button would make the trade-off feel like a bug.
+     */
+    private fun maybeReconnect(intent: Intent?) {
+        if (intent?.action != ACTION_RECONNECT) return
+        intent.action = null
+        requestCapturePermission(scanImmediately = true)
     }
 
     private fun requestOverlayPermission() {
@@ -91,7 +131,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestCapturePermission() {
+    private fun requestCapturePermission(scanImmediately: Boolean = false) {
+        scanAfterGrant = scanImmediately
         if (!container.permissionChecker.canDrawOverlays()) {
             requestOverlayPermission()
             return
@@ -108,6 +149,15 @@ class MainActivity : ComponentActivity() {
         if (!ApiLevel.needsPostNotificationsConsent) return
         if (container.permissionChecker.canPostNotifications()) return
         notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    /**
+     * Puts the eye on screen. Deliberately asks for no screen access: CopyEye gets that only when
+     * the user taps Iris, and gives it straight back afterwards.
+     */
+    private fun startFloatingEye() {
+        requestNotificationPermission()
+        ContextCompat.startForegroundService(this, FloatingEyeService.eyeOnlyIntent(this))
     }
 
     private fun stopFloatingEye() {

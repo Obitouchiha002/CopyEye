@@ -19,12 +19,15 @@ From Android 14, screen-capture consent is per-session and cannot be remembered.
 session for as long as it is running, so the dialog appears once per start rather than once per scan
 — but stopping CopyEye, or Android stopping it, means the next start asks again.
 
-### The screen-recording indicator stays visible
+### The screen-recording indicator during a scan, and the dialog that buys its absence
 
-Because the capture *session* is long-lived, Android shows its recording indicator (and, on some
-versions, a persistent status-bar chip) for the whole time CopyEye is on — even though no frame is
-produced between taps. The indicator is accurate about the permission and pessimistic about the
-behaviour. There is no supported way to hold a projection without it, and CopyEye does not try.
+Android shows a screen-recording indicator for as long as a capture session exists, and no app may
+suppress it. CopyEye's answer is to hold no session except during a scan, so the indicator is absent
+while the eye sits idle and appears only for the moment a frame is taken.
+
+The unavoidable cost sits on the other side of that trade: a new session needs new consent, so
+Android's dialog appears on any scan that starts from a released session. Scan settings →
+"Release screen access after" moves the trade-off; it cannot remove it.
 
 ### Minimum Android 10 (API 29)
 
@@ -81,6 +84,14 @@ For video that can be paused, pausing gives a better result than any burst.
 "Rescan" re-runs recognition at the same resolution and filters to the selected region, rather than
 re-running at full resolution on a crop. It cleans up a noisy result but does not recover text that
 was too small to read the first time. Switching to Accurate mode does.
+
+### The `specialUse` foreground-service type needs a Play justification
+
+The idle service runs as `FOREGROUND_SERVICE_TYPE_SPECIAL_USE`, which is what lets the floating eye
+persist with no screen access and therefore no recording indicator. Google Play requires a written
+justification for that type at review time; the manifest carries one in
+`PROPERTY_SPECIAL_USE_FGS_SUBTYPE`, but a submission may still draw questions. Distribution outside
+Play is unaffected.
 
 ### Keyboard avoidance below Android 11
 

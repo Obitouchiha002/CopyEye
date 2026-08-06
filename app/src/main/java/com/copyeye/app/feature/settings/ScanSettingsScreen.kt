@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -14,6 +17,7 @@ import com.copyeye.app.data.preferences.HighlightStyle
 import com.copyeye.app.data.preferences.HistoryRetention
 import com.copyeye.app.data.preferences.OcrMode
 import com.copyeye.app.data.preferences.OcrScript
+import com.copyeye.app.data.preferences.ProjectionIdleTimeout
 import com.copyeye.app.ui.components.DetailScaffold
 import com.copyeye.app.ui.components.SettingsChoiceRow
 import com.copyeye.app.ui.components.SettingsDivider
@@ -95,6 +99,35 @@ fun ScanSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 subtitle = "Smaller images and no extra frames. Suggested tier: $tier",
                 checked = settings.lowPerformanceMode,
                 onCheckedChange = { enabled -> update { it.copy(lowPerformanceMode = enabled) } },
+            )
+        }
+
+        SettingsSection(title = "Screen-recording indicator") {
+            SettingsChoiceRow(
+                title = "Release screen access after",
+                options = ProjectionIdleTimeout.entries,
+                selected = settings.projectionIdleTimeout,
+                labelOf = { timeout ->
+                    when (timeout) {
+                        ProjectionIdleTimeout.Immediately -> "Right away"
+                        ProjectionIdleTimeout.FifteenSeconds -> "15 seconds"
+                        ProjectionIdleTimeout.OneMinute -> "1 minute"
+                        ProjectionIdleTimeout.ThreeMinutes -> "3 minutes"
+                        ProjectionIdleTimeout.Never -> "Never"
+                    }
+                },
+                onSelect = { timeout -> update { it.copy(projectionIdleTimeout = timeout) } },
+            )
+            Text(
+                text = "Android shows a screen-recording icon for as long as CopyEye can read " +
+                    "your screen, and no app is allowed to hide it. So CopyEye hands the access " +
+                    "back as soon as you stop scanning, and the icon goes with it.\n\n" +
+                    "The trade-off is Android's: getting access back needs its permission dialog " +
+                    "again. Tapping Iris shows that dialog and then scans straight away, so it " +
+                    "stays one gesture. A shorter setting means less icon and more dialogs.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
 

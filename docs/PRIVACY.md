@@ -18,25 +18,33 @@ The rest of this document is those three sentences, checked.
 
 ## "Only when you tap"
 
-This is enforced by the capture pipeline's shape, not by a flag.
+CopyEye holds no screen access at all until you tap Iris, and gives it back before recognition even
+starts. This is a property of the pipeline, not a flag in it.
 
-The virtual display that mirrors the screen is created with **no surface attached**. A virtual
-display with a null surface causes the compositor to produce no frames. Attaching the `ImageReader`'s
-surface is the first thing a scan does and detaching it is the last:
+While the eye is on screen, the service runs as a `specialUse` foreground service. There is no
+`MediaProjection`, no virtual display, and nothing capable of reading the screen. Tapping Iris raises
+Android's consent dialog, switches the service to `mediaProjection`, takes exactly one frame, and
+stops the projection again — all before OCR runs. Everything after that point works on a bitmap in
+this process's memory.
 
-```kotlin
-display.setSurface(reader.surface)   // scan begins — frames start
-… one frame …
-display.setSurface(null)             // scan ends — frames stop
+**How to check it yourself, on your own phone:**
+
+```
+adb shell dumpsys activity services com.copyeye.app | grep types=
 ```
 
-Between scans there is nothing to read, discard or accidentally log, because nothing is being
-produced. See `MediaProjectionController` and the "Screen-capture lifecycle" section of
-[ARCHITECTURE.md](ARCHITECTURE.md).
+`types=40000000` is `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` — no screen access.
+`types=20` is `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION`, and you should only ever catch it there
+during a scan.
 
-The one visible cost of this design is Android's own: the capture *session* is long-lived, so the
-system shows a screen-recording indicator for as long as CopyEye is on. That indicator is accurate
-about the permission and pessimistic about the behaviour, and CopyEye does not try to hide it.
+The visible consequence is the one that matters most to users: **Android's screen-recording indicator
+is not on your status bar while CopyEye sits idle**, because there is nothing for it to report. It
+appears for the moment of a scan and goes.
+
+The cost is Android's, not ours: a new session needs new consent, so the system dialog appears on a
+scan that starts from a released session. Scan settings → "Release screen access after" lets you
+trade a short-lived session against fewer dialogs, up to `Never` if you would rather keep the
+indicator and never see the dialog again.
 
 ## "Processed on your device"
 
@@ -77,7 +85,8 @@ Captured frames exist as a `Bitmap` in memory and nowhere else.
 | Permission | Purpose | If denied |
 |---|---|---|
 | `SYSTEM_ALERT_WINDOW` | Draw Iris over other apps | The eye cannot appear; the app explains and links to the setting |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Hold a capture session, as Android requires | Not user-denyable |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keep the floating eye alive **without** any screen access. The service's normal state. | Not user-denyable |
+| `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Required by Android before a capture may start; held only for the moment of a scan | Not user-denyable |
 | `POST_NOTIFICATIONS` | The ongoing notification, which is also the fastest way to stop CopyEye | Scanning still works; the user loses the quick stop |
 | `VIBRATE` | Three short haptic taps | Silently skipped |
 
@@ -179,4 +188,5 @@ It does not attempt to work around the protection by any means, and there is no 
 3. `FrameStore` — one slot, released on replace and on clear.
 4. `ScanViewModel.onCleared` — releases the frame unconditionally.
 5. `grep -rn "Log\." app/src/main` — no call site takes recognised text.
+7. `dumpsys activity services com.copyeye.app | grep types=` while idle — `40000000`, never `20`.
 6. `ClipboardWriter` — writes only; no `addPrimaryClipChangedListener` anywhere in the app.

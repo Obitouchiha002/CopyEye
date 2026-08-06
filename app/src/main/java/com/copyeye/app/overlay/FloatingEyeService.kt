@@ -11,6 +11,7 @@ import android.content.res.Configuration
 import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.util.Log
 import androidx.lifecycle.LifecycleService
@@ -27,7 +28,9 @@ import com.copyeye.app.core.state.CopyEyeBus
 import com.copyeye.app.core.state.CopyEyeError
 import com.copyeye.app.core.state.CopyEyeEvent
 import com.copyeye.app.core.state.CopyEyeState
+import com.copyeye.app.core.state.ScanTiming
 import com.copyeye.app.data.preferences.AppSettings
+import com.copyeye.app.data.preferences.ProjectionIdleTimeout
 import com.copyeye.app.selection.ScanActivity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -60,6 +63,8 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
     private var settings: AppSettings = AppSettings()
     private var scanJob: Job? = null
     private var hideJob: Job? = null
+    private var idleStopJob: Job? = null
+    private var currentForegroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
     private var paused = false
 
     override fun onCreate() {
@@ -118,6 +123,7 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
     override fun onDestroy() {
         scanJob?.cancel()
         hideJob?.cancel()
+        idleStopJob?.cancel()
         controller.detach()
         projection.stop()
         FrameStore.clear()
@@ -128,7 +134,17 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
     // --- Start / stop --------------------------------------------------------------------------
 
     private fun handleStart(intent: Intent) {
-        startAsForeground()
+        val hasGrant = intent.hasExtra(EXTRA_RESULT_DATA)
+        // Switching CopyEye on gives the user a floating button and nothing else. No capture
+        // session is created and no screen-recording indicator appears until they actually ask for
+        // a scan by tapping it.
+        startAsForeground(
+            if (hasGrant) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            } else {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            },
+        )
         CopyEyeBus.setServiceRunning(true)
 
         if (!container.permissionChecker.canDrawOverlays()) {
@@ -165,6 +181,44 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         controller.attach(settings)
         controller.setEyeVisible(true)
         updateNotification()
+        scheduleProjectionRelease()
+
+        if (intent.getBooleanExtra(EXTRA_SCAN_AFTER_START, false) && projection.isActive) {
+            startScan(regionMode = false)
+        }
+
+        // Load the OCR models now, while the user is still looking at the notification, rather
+        // than on their first tap. Cold model initialisation costs several seconds and would
+        // otherwise land on the one scan they judge the app by.
+        lifecycleScope.launch {
+            val started = SystemClock.elapsedRealtime()
+            container.textRecognitionEngine.warmUp(settings.scripts)
+            Log.i(TAG, "OCR warm-up took ${SystemClock.elapsedRealtime() - started}ms")
+        }
+    }
+
+    /**
+     * Releases the capture session once it has gone unused.
+     *
+     * Android shows a screen-recording indicator for as long as a session exists, and there is no
+     * way to suppress it — nor should there be. The only honest way to get the indicator off the
+     * user's status bar is to stop holding the thing it is reporting. The cost is a fresh consent
+     * dialog on the next scan, which is why the timeout is a setting and why scanning again inside
+     * the window is free.
+     *
+     * The eye and the service stay alive throughout; only the projection goes.
+     */
+    private fun scheduleProjectionRelease() {
+        idleStopJob?.cancel()
+        if (!projection.isActive) return
+        val timeout = settings.projectionIdleTimeout.millis ?: return
+        idleStopJob = lifecycleScope.launch {
+            delay(timeout)
+            if (projection.isActive) {
+                Log.i(TAG, "Releasing screen access after ${timeout}ms idle")
+                releaseScreenAccess()
+            }
+        }
     }
 
     private fun resume() {
@@ -208,8 +262,9 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         if (scanJob?.isActive == true) return
 
         if (!projection.isActive) {
-            CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.ProjectionStopped))
-            controller.showBlocked()
+            // The session was released while idle. Ask for it back and run this scan as soon as
+            // it is granted, so the user's tap still ends in a scan rather than in a settings
+            // screen they then have to act on.
             startActivity(
                 MainActivity.reconnectIntent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
@@ -221,18 +276,23 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
             return
         }
 
+        idleStopJob?.cancel()
         controller.transitionTo(CopyEyeState.Capturing)
         controller.setMood(com.copyeye.app.overlay.IrisEyeView.Mood.Scanning)
-        // The eye is hidden for the grab so it does not end up inside its own screenshot.
-        controller.setEyeVisible(false)
 
         scanJob = lifecycleScope.launch {
             try {
+                val tapAt = SystemClock.elapsedRealtime()
+                // Hiding the eye is not enough on its own — the compositor has to have drawn the
+                // hide before the frame is grabbed, or Iris ends up inside her own screenshot.
+                controller.hideEyeForCapture()
+                val hiddenAt = SystemClock.elapsedRealtime()
                 val outcome = if (settings.smartFrameMode && !settings.lowPerformanceMode) {
                     projection.captureSharpestFrame(SMART_FRAME_COUNT)
                 } else {
                     projection.captureFrame()
                 }
+                val capturedAt = SystemClock.elapsedRealtime()
                 controller.setEyeVisible(!paused)
                 controller.setMood(com.copyeye.app.overlay.IrisEyeView.Mood.Idle)
 
@@ -244,7 +304,20 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
                             cropInsets = statusBarCrop(outcome.frame.screenHeight),
                             lowPerformanceMode = settings.lowPerformanceMode,
                         )
+                        // Screen access is handed back the instant the pixels are in memory —
+                        // before recognition, before the user has even chosen anything. From here
+                        // on the scan is working on a bitmap, not on the screen.
+                        if (settings.projectionIdleTimeout == ProjectionIdleTimeout.Immediately) {
+                            releaseScreenAccess()
+                        } else {
+                            scheduleProjectionRelease()
+                        }
                         FrameStore.put(prepared)
+                        ScanTiming.record(
+                            hideMs = hiddenAt - tapAt,
+                            captureMs = capturedAt - hiddenAt,
+                            prepareMs = SystemClock.elapsedRealtime() - capturedAt,
+                        )
                         controller.transitionTo(CopyEyeState.Scanning)
                         startActivity(
                             ScanActivity.intent(this@FloatingEyeService, regionMode)
@@ -326,13 +399,44 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
 
     // --- Notification --------------------------------------------------------------------------
 
-    private fun startAsForeground() {
+    /**
+     * Runs the service in the foreground under the given type.
+     *
+     * The type is not fixed for the service's life. While idle, CopyEye holds no screen access at
+     * all and runs as `specialUse` — which is why no screen-recording indicator appears. It becomes
+     * a `mediaProjection` service only for the moment a scan is running, because Android requires
+     * that type to already be active before `getMediaProjection` is called, and it drops straight
+     * back afterwards.
+     */
+    private fun startAsForeground(type: Int) {
         createChannel()
-        startForeground(
-            NOTIFICATION_ID,
-            buildNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION,
-        )
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification(), type)
+            currentForegroundType = type
+        } catch (e: SecurityException) {
+            // A mediaProjection-typed start is refused without a live grant; fall back so the eye
+            // survives rather than taking the whole service down.
+            Log.w(TAG, "Foreground type $type refused: ${e.message}")
+            if (type != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+                )
+                currentForegroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            }
+        }
+    }
+
+    /** Drops back to the idle type once a scan no longer needs screen access. */
+    private fun releaseScreenAccess() {
+        idleStopJob?.cancel()
+        if (projection.isActive) projection.stop()
+        CopyEyeBus.setProjectionActive(false)
+        if (currentForegroundType != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
+            startAsForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        }
+        updateNotification()
     }
 
     private fun notificationManager(): NotificationManager? =
@@ -420,13 +524,29 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
 
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
+        const val EXTRA_SCAN_AFTER_START = "scan_after_start"
 
-        /** Start command carrying a fresh screen-capture consent result. */
-        fun startIntent(context: Context, resultCode: Int, data: Intent): Intent =
+        /**
+         * Start command carrying a fresh screen-capture consent result.
+         *
+         * @param scanImmediately true when this grant came from the user tapping Iris after the
+         *   session had been released, so the tap should still end in a scan.
+         */
+        fun startIntent(
+            context: Context,
+            resultCode: Int,
+            data: Intent,
+            scanImmediately: Boolean = false,
+        ): Intent =
             Intent(context, FloatingEyeService::class.java)
                 .setAction(ACTION_START)
                 .putExtra(EXTRA_RESULT_CODE, resultCode)
                 .putExtra(EXTRA_RESULT_DATA, data)
+                .putExtra(EXTRA_SCAN_AFTER_START, scanImmediately)
+
+        /** Starts the floating eye with no screen access at all. */
+        fun eyeOnlyIntent(context: Context): Intent =
+            Intent(context, FloatingEyeService::class.java).setAction(ACTION_START)
 
         fun stopIntent(context: Context): Intent =
             Intent(context, FloatingEyeService::class.java).setAction(ACTION_STOP)

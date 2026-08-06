@@ -1,5 +1,6 @@
 package com.copyeye.app.ocr
 
+import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.SystemClock
 import android.util.Log
@@ -13,8 +14,9 @@ import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -36,6 +38,45 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
 
     private val recognizers = mutableMapOf<OcrScript, TextRecognizer>()
 
+    @Volatile
+    private var warm = false
+
+    override val isWarm: Boolean get() = warm
+
+    /**
+     * Forces model initialisation by running recognition on a throwaway image.
+     *
+     * Creating the `TextRecognizer` is cheap; ML Kit does not touch the models until the first
+     * `process` call. So a real (if tiny) process call is the only thing that actually warms it.
+     * 32x32 is large enough to be accepted and small enough to cost nothing.
+     */
+    override suspend fun warmUp(scripts: Set<OcrScript>) {
+        if (warm) return
+        withContext(Dispatchers.Default) {
+            val probe = Bitmap.createBitmap(WARMUP_SIZE, WARMUP_SIZE, Bitmap.Config.ARGB_8888)
+            try {
+                val image = InputImage.fromBitmap(probe, 0)
+                // Latin first, and `warm` is set as soon as it lands: a scan arriving mid-warm-up
+                // should not be told the engine is cold just because the second script is still
+                // loading.
+                orderScripts(scripts).forEach { script ->
+                    val started = SystemClock.elapsedRealtime()
+                    try {
+                        recognizerFor(script).process(image).await()
+                        warm = true
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Warm-up failed for $script: ${e.message}")
+                    }
+                    Log.d(TAG, "warm-up $script took ${SystemClock.elapsedRealtime() - started}ms")
+                }
+            } finally {
+                probe.recycle()
+            }
+        }
+    }
+
     @Synchronized
     private fun recognizerFor(script: OcrScript): TextRecognizer = recognizers.getOrPut(script) {
         when (script) {
@@ -45,53 +86,72 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
         }
     }
 
-    override suspend fun recognize(frame: ScreenFrame, scripts: Set<OcrScript>): OcrResult {
+    override fun recognizeProgressive(
+        frame: ScreenFrame,
+        scripts: Set<OcrScript>,
+    ): Flow<OcrResult> = flow {
         val bitmap = frame.bitmap
         if (bitmap.isRecycled) {
-            return OcrResult.empty(0, 0)
+            emit(OcrResult.empty(0, 0))
+            return@flow
         }
         val started = SystemClock.elapsedRealtime()
-        val requested = scripts.ifEmpty { setOf(OcrScript.Latin) }
+        val ordered = orderScripts(scripts)
+        val collected = mutableListOf<Text>()
 
-        val texts: List<Text> = coroutineScope {
-            val image = InputImage.fromBitmap(bitmap, frame.rotationDegrees)
-            requested
-                .mapNotNull { script ->
-                    val recognizer = try {
-                        recognizerFor(script)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Recogniser for $script unavailable")
-                        null
-                    }
-                    recognizer?.let { script to it }
-                }
-                .map { (script, recognizer) ->
-                    async(Dispatchers.Default) {
-                        try {
-                            recognizer.process(image).await()
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            // One script failing must not lose the other script's results.
-                            Log.w(TAG, "Recognition failed for $script: ${e.message}")
-                            null
-                        }
-                    }
-                }
-                .mapNotNull { it.await() }
+        ordered.forEach { script ->
+            val recognizer = try {
+                recognizerFor(script)
+            } catch (e: Exception) {
+                Log.w(TAG, "Recogniser for $script unavailable")
+                return@forEach
+            }
+            val scriptStarted = SystemClock.elapsedRealtime()
+            val text = try {
+                // A fresh InputImage per recogniser. Sharing one across calls makes ML Kit's
+                // native side lock and unlock the same pixel buffer twice, which it reports as
+                // "Failed to unlock pixels for bitmap" and which loses the second result.
+                recognizer.process(InputImage.fromBitmap(bitmap, frame.rotationDegrees)).await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // One script failing must not lose the other script's results.
+                Log.w(TAG, "Recognition failed for $script: ${e.message}")
+                null
+            }
+            Log.d(TAG, "$script took ${SystemClock.elapsedRealtime() - scriptStarted}ms")
+
+            if (text != null) {
+                collected += text
+                warm = true
+                val blocks = mergeResults(collected)
+                emit(
+                    OcrResult(
+                        blocks = blocks,
+                        sourceWidth = bitmap.width,
+                        sourceHeight = bitmap.height,
+                        elapsedMs = SystemClock.elapsedRealtime() - started,
+                    ),
+                )
+            }
         }
 
-        if (texts.isEmpty()) {
+        if (collected.isEmpty()) {
             throw OcrUnavailableException("No text recogniser could be created")
         }
+    }.flowOn(Dispatchers.Default)
 
-        val blocks = withContext(Dispatchers.Default) { mergeResults(texts) }
-        return OcrResult(
-            blocks = blocks,
-            sourceWidth = bitmap.width,
-            sourceHeight = bitmap.height,
-            elapsedMs = SystemClock.elapsedRealtime() - started,
-        )
+    /**
+     * Latin first when it is requested.
+     *
+     * Since the scripts run one after another and results are shown as they arrive, the order
+     * decides what the user sees first. Latin wins by default because interface chrome — buttons,
+     * labels, URLs — is Latin even on a Hindi screen, so it is the pass most likely to contain
+     * something worth copying.
+     */
+    private fun orderScripts(scripts: Set<OcrScript>): List<OcrScript> {
+        val requested = scripts.ifEmpty { setOf(OcrScript.Latin) }
+        return requested.sortedBy { if (it == OcrScript.Latin) 0 else 1 }
     }
 
     /**
@@ -183,6 +243,7 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
 
     @Synchronized
     override fun close() {
+        warm = false
         recognizers.values.forEach { recognizer ->
             runCatching { recognizer.close() }
         }
@@ -197,5 +258,8 @@ class MlKitTextRecognitionEngine : TextRecognitionEngine {
 
         /** Above this overlap, two blocks describe the same paragraph. */
         const val BLOCK_MERGE_IOU = 0.60f
+
+        /** Big enough for ML Kit to accept, small enough to cost nothing. */
+        const val WARMUP_SIZE = 32
     }
 }

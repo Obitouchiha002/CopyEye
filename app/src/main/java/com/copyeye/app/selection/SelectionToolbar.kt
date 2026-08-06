@@ -107,24 +107,20 @@ fun SelectionToolbar(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
+            // The secondary actions get their own scrolling row. They used to share a row with
+            // Copy, and on a 1080p phone the six icons consumed the entire width — which left the
+            // weighted Copy button at zero width. The single most important control in the app was
+            // invisible. It now owns a full-width row of its own, below everything else and inside
+            // easy thumb reach.
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Button(
-                    onClick = onCopy,
-                    enabled = hasSelection,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Rounded.ContentCopy, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Copy")
-                }
-
-                Spacer(Modifier.width(6.dp))
-
                 ToolbarIcon(Icons.Rounded.SelectAll, "Copy all", onCopyAll)
                 ToolbarIcon(Icons.Rounded.Edit, "Edit before copying", onEdit)
                 ToolbarIcon(
@@ -135,6 +131,20 @@ fun SelectionToolbar(
                 ToolbarIcon(Icons.Rounded.Refresh, "Rescan", onRescan)
                 ToolbarIcon(Icons.Rounded.Share, "Share", onShare)
                 ToolbarIcon(Icons.Rounded.Close, "Close", onClose)
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            Button(
+                onClick = onCopy,
+                enabled = hasSelection,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+            ) {
+                Icon(Icons.Rounded.ContentCopy, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (hasSelection) "Copy" else "Tap text to select")
             }
         }
     }

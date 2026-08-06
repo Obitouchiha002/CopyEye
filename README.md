@@ -20,6 +20,7 @@ a word, a line, a paragraph, or everything. Copy, and you are back in the app yo
 | **Smart actions** | Links, phone numbers, email addresses and addresses get a secondary action |
 | **Clipboard history** | Optional, off by default, local only, with automatic expiry |
 | **Privacy** | On-device OCR, no network permission at all, frames deleted after each scan |
+| **No recording indicator at rest** | CopyEye holds zero screen access until you tap. Android's screen-recording icon appears for the scan and goes. |
 | **Runs on** | Android 10 and every version above it |
 
 ---
@@ -65,14 +66,19 @@ per-ABI APKs: about **13–17 MB** for a real device, against 45 MB for the univ
 
 1. Open CopyEye and walk through the five onboarding screens.
 2. Grant **Display over other apps** — this is what lets Iris float.
-3. Grant **screen recording** when Android's dialog appears. Android asks for this every time a new
-   capture session starts; CopyEye keeps one session alive so you are asked once per start, not once
-   per scan.
-4. Iris appears at the right edge. Drag her anywhere; she snaps to the nearest side.
-5. Open any app, tap Iris, pick text, copy.
+3. Iris appears at the right edge. Drag her anywhere; she snaps to the nearest side. **No screen
+   permission is asked for at this point, and no recording indicator appears** — CopyEye cannot see
+   your screen yet.
+4. Open any app and tap Iris. Android's screen-capture dialog appears; tap **Start now**. CopyEye
+   takes one frame, hands the access straight back, and shows you the text.
+5. Pick text, copy, and you are back where you were.
 
-An ongoing notification is shown for as long as CopyEye can read your screen. Its **Stop** action
-removes that access instantly.
+By default CopyEye releases screen access the instant it has the frame, so the recording indicator is
+only on your status bar for the moment of the scan. The trade-off is Android's: a new session needs a
+new dialog. **Scan settings → Release screen access after** lets you keep the session for 15 seconds,
+1 minute, 3 minutes, or indefinitely if you would rather never see the dialog again.
+
+An ongoing notification is shown while CopyEye is running. Its **Stop** action shuts everything down.
 
 ---
 
@@ -81,7 +87,8 @@ removes that access instantly.
 | Permission | Why |
 |---|---|
 | `SYSTEM_ALERT_WINDOW` | Draws Iris above other apps. Without it there is no product. |
-| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Android requires a foreground service to hold a screen-capture session, and requires the notification that comes with it. |
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the floating eye alive with **no** screen access. This is the type the service runs under nearly all the time. |
+| `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Required by Android before a capture can start. The service switches to this type only for the moment a scan is running. |
 | `POST_NOTIFICATIONS` | That notification is also how you stop CopyEye at any moment. Denying it does not break scanning. |
 | `VIBRATE` | Three short taps: scan started, text ready, copied. Can be turned off. |
 

@@ -18,6 +18,26 @@ enum class OcrMode { Fast, Accurate }
 /** How detected text is outlined in the selection overlay. */
 enum class HighlightStyle { Outline, Fill, Underline }
 
+/**
+ * How long a screen-capture session survives with no scanning.
+ *
+ * Android shows a screen-recording indicator for as long as the session exists — it cannot be
+ * suppressed, and should not be. Releasing the session when it is not being used is the only
+ * honest way to make the indicator go away, at the cost of a fresh consent dialog next time.
+ */
+enum class ProjectionIdleTimeout(val millis: Long?) {
+    /** Zero grace. The icon is on screen only while a scan is actually happening. */
+    Immediately(0L),
+
+    /** Long enough that a burst of scans costs one dialog, short enough to feel momentary. */
+    FifteenSeconds(15_000L),
+    OneMinute(60_000L),
+    ThreeMinutes(180_000L),
+
+    /** Keep the session. One dialog per start, but the indicator stays up. */
+    Never(null),
+}
+
 /** How long copied items survive in local history. */
 enum class HistoryRetention(val millis: Long?) {
     OneHour(60L * 60_000L),
@@ -58,6 +78,7 @@ data class AppSettings(
     val scripts: Set<OcrScript> = setOf(OcrScript.Latin, OcrScript.Devanagari),
     val ocrMode: OcrMode = OcrMode.Fast,
     val smartFrameMode: Boolean = false,
+    val projectionIdleTimeout: ProjectionIdleTimeout = ProjectionIdleTimeout.Immediately,
     val autoCopySingleLine: Boolean = false,
     val closeAfterCopy: Boolean = true,
     val closeAfterCopyDelayMs: Long = 550L,
