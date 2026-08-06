@@ -34,6 +34,16 @@ fun HelpScreen(
     val topics = remember {
         listOf(
             HelpTopic(
+                "I tap Iris and nothing happens",
+                "On Xiaomi, Redmi, POCO, Oppo, Vivo and Realme phones there is a second permission " +
+                    "beyond \"Display over other apps\", and without it your phone silently blocks " +
+                    "CopyEye from opening the scan screen while another app is in front.\n\n" +
+                    "Settings → Apps → CopyEye → Other permissions → turn on \"Display pop-up " +
+                    "windows while running in background\".\n\n" +
+                    "On the same screen, also turn on Autostart, and set Battery saver to " +
+                    "\"No restrictions\" — otherwise the floating eye disappears after a while.",
+            ),
+            HelpTopic(
                 "How do I move Iris?",
                 "Touch and drag. Iris follows your finger and snaps to the nearest side when you " +
                     "let go. Dragging never starts a scan — only a clean tap does.",

@@ -106,6 +106,16 @@ android {
         warningsAsErrors = false
         abortOnError = true
         disable += "GradleDependency"
+
+        /**
+         * `InlinedApi` has to be an error, not a warning.
+         *
+         * A constant that is too new for minSdk gets inlined by the compiler, so lint reports it
+         * under `InlinedApi` rather than `NewApi` — as a warning. That is exactly how
+         * `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` (API 34) reached a build with minSdk 29 and broke
+         * the service on every Android 10 to 13 device, while the build stayed green.
+         */
+        error += "InlinedApi"
     }
 }
 

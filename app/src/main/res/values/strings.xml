@@ -14,6 +14,12 @@
     <string name="notification_action_resume">Resume</string>
     <string name="notification_action_stop">Stop</string>
 
+    <!-- Blocked-launch alert -->
+    <string name="alert_channel_name">Something needs your attention</string>
+    <string name="alert_channel_description">Shown when CopyEye is stopped from doing something you asked for.</string>
+    <string name="blocked_title">CopyEye could not open the scan screen</string>
+    <string name="blocked_body">Your phone blocked CopyEye from opening a screen while another app was in front. On Xiaomi, Redmi and POCO phones this is a separate setting: Settings → Apps → CopyEye → Other permissions → turn on \"Display pop-up windows while running in background\". Tap here to open CopyEye\'s app settings.</string>
+
     <!-- Errors -->
     <string name="error_overlay_denied">CopyEye needs permission to draw over other apps before the eye can appear.</string>
     <string name="error_capture_denied">Screen reading was declined, so CopyEye cannot scan.</string>

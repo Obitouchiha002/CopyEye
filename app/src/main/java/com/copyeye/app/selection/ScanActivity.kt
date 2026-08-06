@@ -54,6 +54,7 @@ class ScanActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lastStartedAtElapsedMs = android.os.SystemClock.elapsedRealtime()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val regionMode = intent.getBooleanExtra(EXTRA_REGION_MODE, false)
@@ -134,6 +135,20 @@ class ScanActivity : ComponentActivity() {
     }
 
     companion object {
+        /**
+         * When this activity last reached `onCreate`.
+         *
+         * The service uses it to find out whether its `startActivity` actually produced a screen.
+         * Some OEM builds — Xiaomi's MIUI most prominently — gate background activity starts behind
+         * a permission of their own, and refuse them *silently*: no exception, no log, nothing.
+         * From the user's side that is a floating button that does nothing when tapped, with no
+         * explanation anywhere. Watching for the activity that never arrived is the only way to
+         * turn that into a message.
+         */
+        @Volatile
+        var lastStartedAtElapsedMs: Long = 0L
+            private set
+
         private const val EXTRA_REGION_MODE = "region_mode"
         private const val EXTRA_SECURE_SCREEN = "secure_screen"
 
@@ -283,6 +298,8 @@ class ScanActivity : ComponentActivity() {
             "The screen took too long to capture. Try again."
         com.copyeye.app.core.state.CopyEyeError.CaptureEmpty ->
             "Nothing came back from the capture. Try again."
+        com.copyeye.app.core.state.CopyEyeError.ScanScreenBlocked ->
+            "Your phone blocked CopyEye from opening this screen over another app."
         com.copyeye.app.core.state.CopyEyeError.OcrTimedOut ->
             "This screen took too long to read. Photos and video frames are much slower than app " +
                 "text — try zooming in on just the part you want, then scanning again."

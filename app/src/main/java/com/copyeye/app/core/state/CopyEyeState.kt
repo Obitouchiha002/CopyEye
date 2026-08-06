@@ -79,6 +79,8 @@ enum class CopyEyeError {
 
     /** Recognition ran but blew its time budget — usually a photo or a video frame. */
     OcrTimedOut,
+    /** The OS refused to open the selection screen from the background. */
+    ScanScreenBlocked,
     ClipboardUnavailable,
     LowMemory,
     Unknown,

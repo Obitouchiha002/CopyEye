@@ -57,6 +57,17 @@ object ApiLevel {
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     val hasStrictMediaProjectionRules: Boolean get() = sdk >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
+    /**
+     * `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` arrived in U.
+     *
+     * Below it there is no "running but holding nothing" service type, so the service simply stays
+     * a `mediaProjection` service throughout. That is fine on those versions: only Android 14 and
+     * above require the type to be live *before* `getMediaProjection`, and only there does the type
+     * need to change mid-life.
+     */
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    val hasSpecialUseForegroundServiceType: Boolean get() = sdk >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+
     /** `Activity.overridePendingTransition` was replaced by `overrideActivityTransition` in U. */
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     val hasActivityTransitionOverrides: Boolean get() = sdk >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE

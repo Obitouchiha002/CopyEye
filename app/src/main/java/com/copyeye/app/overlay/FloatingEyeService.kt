@@ -81,7 +81,7 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
     private var scanJob: Job? = null
     private var hideJob: Job? = null
     private var idleStopJob: Job? = null
-    private var currentForegroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+    private var currentForegroundType = 0
     private var paused = false
 
     override fun onCreate() {
@@ -162,7 +162,7 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
             if (hasGrant) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
             } else {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                idleForegroundType()
             },
         )
         CopyEyeBus.setServiceRunning(true)
@@ -350,9 +350,8 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
                             prepareMs = SystemClock.elapsedRealtime() - capturedAt,
                         )
                         controller.transitionTo(CopyEyeState.Scanning)
-                        startActivity(
-                            ScanActivity.intent(this@FloatingEyeService, regionMode)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        launchScanScreen(
+                            ScanActivity.intent(this@FloatingEyeService, regionMode),
                         )
                     }
 
@@ -382,6 +381,68 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
                 CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.Unknown))
             }
         }
+    }
+
+    /**
+     * Starts the selection screen and checks that it actually appeared.
+     *
+     * `startActivity` from a service is allowed on stock Android because CopyEye holds
+     * `SYSTEM_ALERT_WINDOW`. Several OEM builds add a separate permission on top of that and, when
+     * it is missing, drop the launch without raising anything. The tap simply does nothing — which
+     * is indistinguishable from a broken app, and is exactly what gets reported as one.
+     *
+     * So the launch is followed by a check, and a launch that produced no screen is reported to the
+     * user with the setting that fixes it.
+     */
+    private fun launchScanScreen(intent: Intent) {
+        val requestedAt = SystemClock.elapsedRealtime()
+        try {
+            startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            Log.e(TAG, "Scan screen refused outright: ${e.message}")
+            reportScanScreenBlocked()
+            return
+        }
+        lifecycleScope.launch {
+            delay(SCAN_SCREEN_GRACE_MS)
+            if (ScanActivity.lastStartedAtElapsedMs < requestedAt) {
+                Log.e(TAG, "Scan screen never appeared — background launch was blocked")
+                reportScanScreenBlocked()
+            }
+        }
+    }
+
+    private fun reportScanScreenBlocked() {
+        FrameStore.clear()
+        controller.showBlocked()
+        controller.transitionTo(CopyEyeState.EyeIdle)
+        CopyEyeBus.emit(CopyEyeEvent.Failed(CopyEyeError.ScanScreenBlocked))
+
+        val manager = notificationManager() ?: return
+        // High importance on purpose: this is the app telling the user why the thing they just
+        // asked for did not happen, and it is useless if it is not seen.
+        manager.createNotificationChannel(
+            NotificationChannel(
+                ALERT_CHANNEL_ID,
+                getString(R.string.alert_channel_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply { description = getString(R.string.alert_channel_description) },
+        )
+        val open = PendingIntent.getActivity(
+            this,
+            1,
+            container.permissionChecker.appSettingsIntent(),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = Notification.Builder(this, ALERT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_eye)
+            .setContentTitle(getString(R.string.blocked_title))
+            .setStyle(Notification.BigTextStyle().bigText(getString(R.string.blocked_body)))
+            .setContentText(getString(R.string.blocked_body))
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        runCatching { manager.notify(ALERT_NOTIFICATION_ID, notification) }
     }
 
     /**
@@ -470,23 +531,51 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
      * that type to already be active before `getMediaProjection` is called, and it drops straight
      * back afterwards.
      */
+    /**
+     * The type the service runs under when it is holding no screen access.
+     *
+     * `specialUse` only exists from Android 14. Below that there is no need for it either: the rule
+     * that a `mediaProjection` service must be running before `getMediaProjection` is itself an
+     * Android 14 rule, so on older versions the service can simply stay a `mediaProjection` service
+     * for its whole life.
+     */
+    private fun idleForegroundType(): Int = if (ApiLevel.hasSpecialUseForegroundServiceType) {
+        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+    } else {
+        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+    }
+
     private fun startAsForeground(type: Int) {
         createChannel()
+        val notification = buildNotification()
         try {
-            startForeground(NOTIFICATION_ID, buildNotification(), type)
+            startForeground(NOTIFICATION_ID, notification, type)
             currentForegroundType = type
+            return
         } catch (e: SecurityException) {
-            // A mediaProjection-typed start is refused without a live grant; fall back so the eye
-            // survives rather than taking the whole service down.
+            // A mediaProjection-typed start is refused without a live grant.
             Log.w(TAG, "Foreground type $type refused: ${e.message}")
-            if (type != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
-                startForeground(
-                    NOTIFICATION_ID,
-                    buildNotification(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-                )
-                currentForegroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        } catch (e: IllegalArgumentException) {
+            // The type is not one this platform version knows, or is not declared in the manifest
+            // as this version parses it.
+            Log.w(TAG, "Foreground type $type rejected: ${e.message}")
+        }
+
+        // Whatever went wrong, the eye must survive: a service that cannot go foreground is a
+        // service Android will kill, and the user would be left with nothing and no explanation.
+        try {
+            val fallback = idleForegroundType()
+            if (fallback != type) {
+                startForeground(NOTIFICATION_ID, notification, fallback)
+                currentForegroundType = fallback
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+                currentForegroundType = 0
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not go foreground at all: ${e.message}")
+            startForeground(NOTIFICATION_ID, notification)
+            currentForegroundType = 0
         }
     }
 
@@ -495,9 +584,8 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         idleStopJob?.cancel()
         if (projection.isActive) projection.release()
         CopyEyeBus.setProjectionActive(false)
-        if (currentForegroundType != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
-            startAsForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        }
+        val idle = idleForegroundType()
+        if (currentForegroundType != idle) startAsForeground(idle)
         updateNotification()
     }
 
@@ -576,6 +664,11 @@ class FloatingEyeService : LifecycleService(), FloatingEyeController.Callbacks {
         private const val NOTIFICATION_ID = 4201
         private const val HIDE_DURATION_MS = 60L * 60L * 1000L
         private const val SMART_FRAME_COUNT = 3
+        private const val ALERT_CHANNEL_ID = "copyeye_alerts"
+        private const val ALERT_NOTIFICATION_ID = 4202
+
+        /** How long to wait for the selection screen before deciding it was blocked. */
+        private const val SCAN_SCREEN_GRACE_MS = 2_500L
 
         const val ACTION_START = "com.copyeye.app.action.START"
         const val ACTION_STOP = "com.copyeye.app.action.STOP"
