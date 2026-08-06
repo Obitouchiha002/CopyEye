@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -20,15 +22,31 @@ android {
     }
 
     /**
-     * A local, checked-in-nowhere key so a release build can actually be installed on a phone for
-     * testing. It is not a distribution key: replace it with your own before shipping anything.
+     * Optional local signing, so a release build can be installed on a phone for testing.
+     *
+     * The keystore is never committed. A clone without one still builds a release APK — it just
+     * comes out unsigned, which is the honest outcome: nobody else's build should be signed with a
+     * key they did not make. To sign your own, put a keystore at the repository root and its
+     * credentials in `keystore.properties` (also uncommitted):
+     *
+     *     storeFile=copyeye-test.jks
+     *     storePassword=...
+     *     keyAlias=...
+     *     keyPassword=...
      */
-    signingConfigs {
-        create("testing") {
-            storeFile = file("../copyeye-test.jks")
-            storePassword = "copyeye123"
-            keyAlias = "copyeye"
-            keyPassword = "copyeye123"
+    val keystoreProperties: Properties? =
+        rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+            Properties().also { properties -> file.inputStream().use(properties::load) }
+        }
+
+    if (keystoreProperties != null) {
+        signingConfigs {
+            create("local") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
         }
     }
 
@@ -45,7 +63,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("testing")
+            // Signed only when a local keystore is configured; otherwise deliberately unsigned.
+            signingConfig = signingConfigs.findByName("local")
         }
     }
 
