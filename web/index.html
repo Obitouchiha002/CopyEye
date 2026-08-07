@@ -213,8 +213,8 @@ body {
   background: var(--ink);
   color: var(--text);
   font-family: var(--f-display);
-  font-size: 17px;
-  line-height: 1.6;
+  font-size: 18.5px;
+  line-height: 1.62;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -239,7 +239,7 @@ a { color: inherit; }
 
 .eyebrow {
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--text-2);
@@ -258,13 +258,13 @@ a { color: inherit; }
 h1, h2, h3 { text-wrap: balance; margin: 0; }
 
 h1 {
-  font-size: clamp(42px, 8.4vw, 104px);
+  font-size: clamp(46px, 8.6vw, 108px);
   line-height: .96;
   letter-spacing: -.045em;
   font-weight: 700;
 }
 h2 {
-  font-size: clamp(30px, 4.6vw, 54px);
+  font-size: clamp(34px, 5vw, 60px);
   line-height: 1.04;
   letter-spacing: -.035em;
   font-weight: 700;
@@ -275,8 +275,8 @@ h3 {
   letter-spacing: -.018em;
   font-weight: 650;
 }
-p { margin: 0; max-width: var(--measure); }
-.lede { font-size: clamp(17px, 2vw, 21px); color: var(--text-2); line-height: 1.55; }
+p { margin: 0; max-width: min(var(--measure), 100%); }
+.lede { font-size: clamp(18.5px, 2.1vw, 23px); color: var(--text-2); line-height: 1.55; }
 
 /* The page's signature device, borrowed straight from the product:
    words sit dimmed until they are "lit". */
@@ -332,7 +332,7 @@ p { margin: 0; max-width: var(--measure); }
   margin-left: auto;
   display: flex;
   gap: 26px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-2);
 }
 .top nav a { text-decoration: none; }
@@ -343,13 +343,13 @@ p { margin: 0; max-width: var(--measure); }
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  padding: 11px 20px;
+  padding: 13px 24px;
   border-radius: 3px;
   border: 1px solid transparent;
   background: var(--text);
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 620;
   letter-spacing: -.01em;
   text-decoration: none;
@@ -387,7 +387,7 @@ p { margin: 0; max-width: var(--measure); }
 .hero__meta {
   margin-top: 22px;
   font-family: var(--f-mono);
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--text-2);
   letter-spacing: .02em;
 }
@@ -592,11 +592,11 @@ p { margin: 0; max-width: var(--measure); }
   display: flex;
   flex-wrap: wrap;
   gap: 8px 0;
+  max-width: min(20ch, 100%);
   font-size: clamp(26px, 5vw, 52px);
   line-height: 1.12;
   letter-spacing: -.035em;
   font-weight: 680;
-  max-width: 20ch;
 }
 .litany span { color: var(--text-2); transition: color .3s ease; }
 .litany span::after { content: "."; color: var(--iris); }
@@ -623,14 +623,14 @@ p { margin: 0; max-width: var(--measure); }
 }
 .stage-cell b {
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: .1em;
   color: var(--beam);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.stage-cell strong { font-size: 17px; font-weight: 640; letter-spacing: -.015em; }
-.stage-cell p { font-size: 14.5px; color: var(--text-2); line-height: 1.5; }
+.stage-cell strong { font-size: 18.5px; font-weight: 640; letter-spacing: -.015em; }
+.stage-cell p { font-size: 16px; color: var(--text-2); line-height: 1.5; }
 
 /* ── Proof block ───────────────────────────────────────────── */
 .split {
@@ -643,7 +643,7 @@ p { margin: 0; max-width: var(--measure); }
 
 .proof {
   font-family: var(--f-mono);
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.85;
   background: var(--ink-2);
   border: 1px solid var(--line);
@@ -662,7 +662,7 @@ p { margin: 0; max-width: var(--measure); }
   display: grid;
   grid-template-columns: 18px 1fr;
   gap: 13px;
-  font-size: 15.5px;
+  font-size: 17px;
   color: var(--text-2);
   line-height: 1.5;
 }
@@ -734,7 +734,7 @@ p { margin: 0; max-width: var(--measure); }
 
 /* ── Limits ────────────────────────────────────────────────── */
 .limits { list-style: none; padding: 0; margin: 30px 0 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.limits li { background: var(--ink); padding: 20px 22px; font-size: 15.5px; color: var(--text-2); line-height: 1.55; }
+.limits li { background: var(--ink); padding: 22px 24px; font-size: 17px; color: var(--text-2); line-height: 1.55; }
 .limits b { color: var(--text); font-weight: 620; }
 
 /* ── FAQ ───────────────────────────────────────────────────── */
@@ -743,8 +743,8 @@ p { margin: 0; max-width: var(--measure); }
 .faq summary {
   cursor: pointer;
   list-style: none;
-  padding: 20px 34px 20px 0;
-  font-size: 17px;
+  padding: 22px 36px 22px 0;
+  font-size: 19px;
   font-weight: 620;
   letter-spacing: -.018em;
   position: relative;
@@ -760,7 +760,7 @@ p { margin: 0; max-width: var(--measure); }
   font-size: 19px;
 }
 .faq details[open] summary::after { content: "−"; }
-.faq p { padding: 0 0 22px; color: var(--text-2); font-size: 15.5px; }
+.faq p { padding: 0 0 24px; color: var(--text-2); font-size: 17px; }
 
 /* ── Download ──────────────────────────────────────────────── */
 .dl {
@@ -801,7 +801,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   flex-wrap: wrap;
   gap: 18px 28px;
   align-items: baseline;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-2);
 }
 .foot a { text-decoration: none; }
@@ -843,6 +843,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
 }
 .no-webgl #eye { display: none; }
 .no-webgl .eyewrap__fallback { display: grid; }
+@media (hover: none) { .eyewrap__hint { display: none; } }
 .eyewrap__hint {
   position: absolute;
   left: 50%;
@@ -878,6 +879,134 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
 .stage-cell:hover, .script:hover, .spec:hover {
   transform: translateY(-4px);
   background: var(--ink-2);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile becomes an app.
+
+   On a phone this stops being a page you scroll and becomes five screens you
+   swipe, with a bottom tab bar — the pattern people already have in their
+   thumbs. It is CSS scroll-snap, not a router: the swipe is the browser's own,
+   so it is smooth on a low-end phone and the whole thing still works with
+   JavaScript switched off.
+   ───────────────────────────────────────────────────────────── */
+.tabbar { display: none; }
+
+@media (max-width: 900px) {
+  html, body { overflow: hidden; height: 100%; }
+  .top { position: fixed; top: 0; left: 0; right: 0; }
+
+  main.panes {
+    position: fixed;
+    inset: 62px 0 68px;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  main.panes::-webkit-scrollbar { display: none; }
+
+  main.panes > .pane {
+    flex: 0 0 100vw;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    padding-block: 26px 40px;
+    border-top: 0;
+  }
+  main.panes > .pane .wrap { width: calc(100% - 40px); max-width: calc(100% - 40px); }
+  main.panes > .pane * { max-width: 100%; }
+  .proof { max-width: 100%; }
+
+  /* Everything inside a pane arrives a beat after the pane does. */
+  .js main.panes > .pane .wrap > * {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  .js main.panes > .pane.live .wrap > * {
+    animation: paneIn .46s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  .js main.panes > .pane.live .wrap > *:nth-child(1) { animation-delay: .02s; }
+  .js main.panes > .pane.live .wrap > *:nth-child(2) { animation-delay: .07s; }
+  .js main.panes > .pane.live .wrap > *:nth-child(3) { animation-delay: .12s; }
+  .js main.panes > .pane.live .wrap > *:nth-child(4) { animation-delay: .17s; }
+  .js main.panes > .pane.live .wrap > *:nth-child(5) { animation-delay: .22s; }
+  .js main.panes > .pane.live .wrap > *:nth-child(n+6) { animation-delay: .26s; }
+  @keyframes paneIn { to { opacity: 1; transform: none; } }
+
+  .tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 60;
+    height: 68px;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--ink) 92%, transparent);
+    backdrop-filter: blur(18px);
+    border-top: 1px solid var(--line);
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 0;
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    font-size: 11px;
+    letter-spacing: .02em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    transition: color .2s ease;
+  }
+  .tab svg { width: 21px; height: 21px; transition: transform .28s cubic-bezier(.34,1.56,.64,1); }
+  .tab[aria-selected="true"] { color: var(--text); }
+  .tab[aria-selected="true"] svg { transform: translateY(-2px) scale(1.08); }
+  .tab[aria-selected="true"]::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    width: 26px; height: 3px;
+    border-radius: 3px;
+    background: var(--iris);
+    box-shadow: 0 0 14px var(--iris);
+  }
+
+  footer { display: none; }
+  .top nav { display: none; }
+
+  /* She leads on a phone. On a small screen the eye below the fold is just a
+     surprise nobody scrolls to. */
+  .hero { padding-block: 4px 20px; }
+  .hero__grid { gap: 18px; }
+  .hero__grid > .eyewrap { order: -1; }
+  .eyewrap { width: min(230px, 56vw); }
+  .eyewrap__hint { bottom: -2px; font-size: 10.5px; }
+  .hero__cta { margin-top: 24px; gap: 10px; }
+  .hero__cta .btn { flex: 1 1 auto; justify-content: center; }
+  .hero p { margin-top: 16px; }
+  .band { padding-block: 30px 44px; }
+  h1 { font-size: clamp(40px, 12vw, 60px); }
+  h2 { font-size: clamp(29px, 8vw, 40px); }
+  .litany { font-size: clamp(27px, 8.4vw, 40px); max-width: none; }
+  .phone { width: min(260px, 66vw); }
+}
+
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  .js main.panes > .pane .wrap > * { opacity: 1; transform: none; }
+  main.panes { scroll-behavior: auto; }
 }
 
 /* Scroll reveal, kept to a single quiet gesture. */
@@ -916,12 +1045,15 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
       <a href="#specs">Specs</a>
       <a href="#faq">FAQ</a>
       <a href="#maker">Maker</a>
+      <a href="./developer">Developer</a>
     </nav>
     <a class="btn btn--sm" href="#download">Get the APK</a>
   </div>
 </header>
 
-<main id="top">
+<main id="top" class="panes">
+
+<div class="pane" id="p-home">
 
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <section class="wrap hero band--flush">
@@ -971,6 +1103,9 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
     </div>
   </section>
 
+</div><!-- /p-home -->
+
+<div class="pane" id="p-how">
   <!-- ── How it works ─────────────────────────────────────── -->
   <section class="band" id="how">
     <div class="wrap rise">
@@ -986,11 +1121,12 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
             <div class="screen__dim"></div>
             <div class="sweeper"></div>
             <div class="screen__content">
-              <div class="handle">@copyeye</div>
+              <div class="handle">@techbyvansh</div>
               <div class="line line--tag">2:14 / 3:40</div>
               <div class="line line--hi" id="lineHi">मैंने यह टेक्स्ट वीडियो से कॉपी किया</div>
-              <div class="line line--en">Subtitle: copy this straight off the frame</div>
-              <div class="line line--en">order id 4471 · +91 98765 43210</div>
+              <div class="line line--en">Vansh Kashyap · LZ Worth</div>
+              <div class="line line--en" id="lineSite">vanshkashyap.lzworth.in</div>
+              <div class="line line--en">+91 88006 28376</div>
             </div>
             <div class="copied">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" aria-hidden="true">
@@ -1037,6 +1173,9 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
     </div>
   </section>
 
+</div><!-- /p-how -->
+
+<div class="pane" id="p-privacy">
   <!-- ── Privacy ──────────────────────────────────────────── -->
   <section class="band" id="privacy">
     <div class="wrap split rise">
@@ -1101,6 +1240,9 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     </div>
   </section>
 
+</div><!-- /p-privacy -->
+
+<div class="pane" id="p-get">
   <!-- ── Specs ────────────────────────────────────────────── -->
   <section class="band" id="specs">
     <div class="wrap rise">
@@ -1207,12 +1349,15 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     </div>
   </section>
 
+</div><!-- /p-get -->
+
+<div class="pane" id="p-dev">
   <!-- ── Maker ────────────────────────────────────────────── -->
-  <section class="band" id="maker">
+  <section class="band" id="maker" itemscope itemtype="https://schema.org/Person">
     <div class="wrap maker rise">
       <div>
         <p class="eyebrow">Made by</p>
-        <h2>Vansh Kashyap</h2>
+        <h2 itemprop="name">Vansh Kashyap</h2>
         <p class="lede" style="margin-top:22px">
           Independent Android and web developer from India. I build things I want to use — CopyEye,
           StreamGarden, JanamJyot — and I write them so the privacy claims can be checked rather
@@ -1220,6 +1365,13 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
         </p>
       </div>
       <div class="maker__links">
+        <a class="maker__link" href="./developer">
+          <div>
+            <strong>Full developer profile</strong>
+            <em>Apps, stack, background and contact</em>
+          </div>
+          <span>copyeye.lzworth.in/developer</span>
+        </a>
         <a class="maker__link" href="https://vanshkashyap.lzworth.in/" rel="me author">
           <div>
             <strong>Vansh Kashyap</strong>
@@ -1244,13 +1396,49 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
       </div>
     </div>
   </section>
+</div><!-- /p-dev -->
 
 </main>
+
+
+<nav class="tabbar" role="tablist" aria-label="Sections">
+  <button class="tab" role="tab" data-pane="p-home" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <ellipse cx="12" cy="12" rx="10" ry="6.6"/><circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/>
+    </svg>
+    Home
+  </button>
+  <button class="tab" role="tab" data-pane="p-how" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M4 12h16"/>
+    </svg>
+    Scan
+  </button>
+  <button class="tab" role="tab" data-pane="p-privacy" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <path d="M12 2.6 20 6v6c0 5-3.4 8.3-8 9.4C7.4 20.3 4 17 4 12V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>
+    </svg>
+    Privacy
+  </button>
+  <button class="tab" role="tab" data-pane="p-get" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <path d="M12 3.5v12m0 0 4.5-4.5M12 15.5 7.5 11M4 20h16"/>
+    </svg>
+    Get
+  </button>
+  <button class="tab" role="tab" data-pane="p-dev" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.6-4 3.8-6 7.5-6s6.9 2 7.5 6"/>
+    </svg>
+    Maker
+  </button>
+</nav>
 
 <footer>
   <div class="wrap foot">
     <span>CopyEye — copy any text you can see on your Android screen.</span>
-    <a href="https://vanshkashyap.lzworth.in/">Built by Vansh Kashyap</a>
+    <a href="./developer">Built by Vansh Kashyap</a>
+    <a href="https://vanshkashyap.lzworth.in/">Portfolio</a>
     <a href="https://techbyvansh.lzworth.in/">Tech by Vansh</a>
     <a href="https://github.com/Obitouchiha002/CopyEye">Source</a>
     <span class="foot__end">On-device · no network</span>
@@ -1361,17 +1549,17 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
         void main(){
           vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / min(uRes.x, uRes.y);
 
-          // The lids. An almond, not a band — this is what makes it an eye
-          // rather than a ball, and it frames the sphere at the same time.
-          float b = 1.0 - uBlink;
-          float top =  (0.315 - 0.85 * uv.x * uv.x) * b + 0.004;
-          float bot = -(0.275 - 0.80 * uv.x * uv.x) * b - 0.004;
-          float inEye = smoothstep(top, top - 0.006, uv.y) *
-                        smoothstep(bot, bot + 0.006, uv.y);
+          // Lids that sweep across a whole eyeball, rather than a mask that
+          // crops one. Open, they sit clear of the sphere entirely, so what you
+          // see is the complete ball; a blink brings them down over it.
+          float top =  mix(1.30, 0.012, uBlink);
+          float bot = -mix(1.30, 0.012, uBlink);
+          float inEye = smoothstep(top, top - 0.02, uv.y) *
+                        smoothstep(bot, bot + 0.02, uv.y);
           if (inEye <= 0.001) { gl_FragColor = vec4(0.0); return; }
 
           vec3 ro = vec3(0.0, 0.0, 3.05);
-          vec3 rd = normalize(vec3(uv * 2.5, -3.05));
+          vec3 rd = normalize(vec3(uv * 2.15, -3.05));
 
           float bb = dot(ro, rd);
           float cc = dot(ro, ro) - 1.0;
@@ -1447,14 +1635,20 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
           }
 
           // Lid shadow, so the sphere sits under the lids instead of on them.
-          float lidShade = smoothstep(top, top - 0.085, uv.y) * smoothstep(bot, bot + 0.095, uv.y);
-          surf *= 0.68 + 0.32 * lidShade;
+          // Contact shadow where a lid actually is, so a blink darkens the ball
+          // under it instead of the ball always looking half-shaded.
+          float lidShade = smoothstep(top, top - 0.22, uv.y) * smoothstep(bot, bot + 0.24, uv.y);
+          surf *= 0.55 + 0.45 * lidShade;
+
+          // Ambient occlusion at the silhouette: this is what makes it read as a
+          // sphere sitting in space rather than a flat disc.
+          surf *= 1.0 - 0.34 * smoothstep(0.80, 1.0, length(p.xy));
 
           // On a light ground the bright sclera would dissolve into the page.
           // On a light page the sclera would dissolve into the ground, so the
           // whole eye is seated a shade deeper and given a defining edge.
-          float edge = smoothstep(0.86, 1.0, away);
-          surf = mix(surf, surf * 0.90 - vec3(0.015) - edge * 0.10, uLight);
+          float edge = smoothstep(0.84, 1.0, length(p.xy));
+          surf = mix(surf, surf * 0.92 - vec3(0.012) - edge * 0.13, uLight);
 
           gl_FragColor = vec4(surf, inEye);
         }
@@ -1584,6 +1778,55 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     }, { passive: true });
   }
 
+
+  /* ────────────────────────────────────────────────────────────────────────
+     Tabs and panes.
+
+     The swipe itself is the browser's — scroll-snap does the work, which is
+     why it stays smooth on a cheap phone and keeps working with this script
+     disabled. All this does is keep the tab bar honest about where you are,
+     and animate each pane's contents in as it arrives.
+     ──────────────────────────────────────────────────────────────────────── */
+  const panes = [...document.querySelectorAll('.pane')];
+  const tabs  = [...document.querySelectorAll('.tab')];
+  const rail  = document.querySelector('main.panes');
+
+  if (rail && panes.length && tabs.length) {
+    const select = i => tabs.forEach((t, n) =>
+      t.setAttribute('aria-selected', n === i ? 'true' : 'false'));
+
+    tabs.forEach((t, i) => t.addEventListener('click', () => {
+      panes[i].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', inline: 'start', block: 'nearest' });
+      select(i);
+    }));
+
+    // The first pane is live from the start; the rest wake as they arrive.
+    panes[0].classList.add('live');
+    const seen = new IntersectionObserver(es => {
+      es.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('live');
+        const i = panes.indexOf(e.target);
+        if (i >= 0) select(i);
+      });
+    }, { root: rail, threshold: 0.55 });
+    panes.forEach(p => seen.observe(p));
+    setTimeout(() => panes.forEach(p => p.classList.add('live')), 2500);
+
+    // The header links should move the rail sideways on a phone, not try to
+    // scroll a page that has no vertical scroll left.
+    document.querySelectorAll('.top nav a, a[href^="#"]').forEach(a => {
+      a.addEventListener('click', ev => {
+        if (!matchMedia('(max-width: 900px)').matches) return;
+        const id = a.getAttribute('href').slice(1);
+        const host = document.getElementById(id)?.closest('.pane');
+        if (!host) return;
+        ev.preventDefault();
+        host.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', inline: 'start', block: 'nearest' });
+      });
+    });
+  }
+
   /* ── Quiet reveal on scroll ── */
   const io = new IntersectionObserver((entries, obs) => {
     entries.forEach(e => {
@@ -1592,6 +1835,9 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
       obs.unobserve(e.target);
     });
   }, { rootMargin: '0px 0px -12% 0px' });
+  if (matchMedia('(max-width: 900px)').matches) {
+    document.querySelectorAll('.rise').forEach(el => el.classList.add('in'));
+  }
   document.querySelectorAll('.rise').forEach(el => io.observe(el));
   setTimeout(() => document.querySelectorAll('.rise:not(.in)').forEach(el => el.classList.add('in')), 2500);
 
