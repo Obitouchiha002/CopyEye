@@ -25,7 +25,7 @@ Then point a domain at it and **update these three places to match**:
 | both files → `og:url` and every JSON-LD `@id` | the same URL |
 | `robots.txt` and `sitemap.xml` | the same URL |
 
-They currently all say `https://copyeye.vercel.app/`.
+They currently all say `https://copyeye.lzworth.in/`.
 
 ## The APK
 

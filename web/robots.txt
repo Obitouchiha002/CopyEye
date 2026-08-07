@@ -2,4 +2,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://copyeye.vercel.app/sitemap.xml
+Sitemap: https://copyeye.lzworth.in/sitemap.xml
