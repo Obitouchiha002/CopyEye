@@ -20,7 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.copyeye.app.feature.blocked.BlockedScreen
 import com.copyeye.app.feature.onboarding.NameGateScreen
 import com.copyeye.app.remote.RemoteAdmin
@@ -106,13 +109,25 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle(initialValue = null)
                 var status by remember { mutableStateOf(RemoteAdmin.Status()) }
 
-                LaunchedEffect(settings?.profileName) {
-                    val name = settings?.profileName ?: return@LaunchedEffect
-                    if (name.isBlank()) return@LaunchedEffect
-                    val fresh = RemoteAdmin.checkin(this@MainActivity, name)
-                    status = fresh
-                    if (fresh.fromServer) {
-                        container.settingsRepository.update { it.copy(premium = fresh.premium) }
+                // Keyed on the lifecycle, not only on the name. Keying it on the name alone ran the
+                // check exactly once per process: an admin could block someone and nothing would
+                // happen until the app was killed and reopened, which on a phone can be days. The
+                // comment above already claimed this behaviour before the code did it.
+                val lifecycleOwner = LocalLifecycleOwner.current
+                val profileName = settings?.profileName
+                LaunchedEffect(profileName, lifecycleOwner) {
+                    if (profileName.isNullOrBlank()) return@LaunchedEffect
+                    lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                        val fresh = RemoteAdmin.checkin(this@MainActivity, profileName)
+                        status = fresh
+                        if (fresh.fromServer) {
+                            container.settingsRepository.update { it.copy(premium = fresh.premium) }
+                        }
+                        // Gating this screen alone would have been theatre. The whole app is the
+                        // floating eye, and it keeps scanning quite happily while the block screen
+                        // sits behind it — so a block has to take the service down too. The user
+                        // cannot start it again without getting past this screen.
+                        if (fresh.blocked) stopFloatingEye()
                     }
                 }
 
