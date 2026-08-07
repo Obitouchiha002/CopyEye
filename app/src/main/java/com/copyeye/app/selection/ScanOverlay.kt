@@ -34,10 +34,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
@@ -76,6 +84,14 @@ fun FrozenFrameLayer(
     onDragTo: (x: Float, y: Float, tolerance: Float) -> Unit,
     onRegion: (TextRect) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * How much of the bottom of the viewport the toolbar occupies.
+     *
+     * The frame is fitted *above* it rather than behind it. Letting the toolbar overlap meant the
+     * last line or two of every screen — a video's subtitle, the very thing this app is for — sat
+     * underneath it, visible but impossible to tap.
+     */
+    bottomInsetPx: Float = 0f,
 ) {
     val density = LocalDensity.current
     val touchTolerancePx = with(density) { TOUCH_TOLERANCE_DP.dp.toPx() }
@@ -85,9 +101,13 @@ fun FrozenFrameLayer(
     var pan by remember { mutableStateOf(Offset.Zero) }
     var regionRect by remember { mutableStateOf<TextRect?>(null) }
 
-    val transform = remember(frame, viewport, zoom, pan) {
-        FrameTransform.fit(frame.width, frame.height, viewport.width, viewport.height)
-            .copy(zoom = zoom, panX = pan.x, panY = pan.y)
+    val transform = remember(frame, viewport, zoom, pan, bottomInsetPx) {
+        FrameTransform.fit(
+            bitmapWidth = frame.width,
+            bitmapHeight = frame.height,
+            viewportWidth = viewport.width,
+            viewportHeight = (viewport.height - bottomInsetPx).coerceAtLeast(1f),
+        ).copy(zoom = zoom, panX = pan.x, panY = pan.y)
     }
 
     Canvas(
@@ -204,36 +224,98 @@ fun FrozenFrameLayer(
         )
         drawImage(image = frame, dstOffset = dstOffset, dstSize = dstSize)
 
-        // Dim everything, then leave the recognised text at full brightness so it stays readable.
-        drawRect(color = Color.Black.copy(alpha = dimAmount.coerceIn(0f, 0.85f)))
+        val visibleLines = result?.lines
+            ?.map { transform.bitmapToScreen(it.box.expanded(TEXT_PADDING_PX)) }
+            ?.filter { it.right > 0 && it.left < size.width && it.bottom > 0 && it.top < size.height }
+            .orEmpty()
+        val selected = highlights.map { transform.bitmapToScreen(it.expanded(TEXT_PADDING_PX)) }
 
-        result?.lines?.forEach { line ->
-            val rect = transform.bitmapToScreen(line.box.expanded(OUTLINE_PADDING_PX))
-            if (rect.right < 0 || rect.left > size.width) return@forEach
-            when (highlightStyle) {
-                HighlightStyle.Outline -> drawRoundRectStroke(rect, IrisViolet.copy(alpha = 0.55f))
-                HighlightStyle.Fill -> drawRoundRectFill(rect, IrisViolet.copy(alpha = 0.14f))
-                HighlightStyle.Underline -> drawLine(
-                    color = ScanCyan.copy(alpha = 0.7f),
-                    start = Offset(rect.left, rect.bottom),
-                    end = Offset(rect.right, rect.bottom),
+        // ---- The dim, with the text cut out of it ------------------------------------------
+        //
+        // The obvious way to show "this text is selectable" is to paint something over it. That is
+        // also what makes it look wrong: any colour laid on top of a glyph sits between the reader
+        // and the word, and the text reads as being behind glass.
+        //
+        // So nothing is painted over the text at all. The whole frame is dimmed, and every
+        // recognised line is *subtracted* from the dim — the text is not covered, it is the only
+        // thing still lit. Selection then reads as more light, not more paint.
+        val textShape = Path().apply {
+            visibleLines.forEach { rect -> addRoundRect(rect.toRoundRect(TEXT_CORNER_PX)) }
+        }
+        val dimmed = Path().apply {
+            op(
+                Path().apply { addRect(Rect(0f, 0f, size.width, size.height)) },
+                textShape,
+                PathOperation.Difference,
+            )
+        }
+        drawPath(dimmed, Color.Black.copy(alpha = dimAmount.coerceIn(0f, 0.85f)))
+
+        // A whisper of a marker under each line: enough to say "this is a thing you can tap",
+        // far too faint to compete with the words themselves.
+        if (highlightStyle == HighlightStyle.Underline) {
+            visibleLines.forEach { rect ->
+                drawLine(
+                    color = ScanCyan.copy(alpha = 0.55f),
+                    start = Offset(rect.left + TEXT_CORNER_PX, rect.bottom),
+                    end = Offset(rect.right - TEXT_CORNER_PX, rect.bottom),
                     strokeWidth = 2f,
+                    cap = StrokeCap.Round,
                 )
             }
         }
 
-        highlights.forEach { box ->
-            val rect = transform.bitmapToScreen(box.expanded(OUTLINE_PADDING_PX))
-            drawRoundRectFill(rect, ScanCyan.copy(alpha = 0.34f))
-            drawRoundRectStroke(rect, ScanCyan)
+        // ---- Selection ---------------------------------------------------------------------
+        //
+        // A soft outer glow and a crisp edge, both *outside* the glyphs. The one thing drawn over
+        // the text is a 6%-alpha wash, which is below the threshold where it starts to grey the
+        // strokes but enough to tie the region together as one selection.
+        selected.forEach { rect ->
+            val glow = rect.expanded(SELECTION_GLOW_PX)
+            drawRoundRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(ScanCyan.copy(alpha = 0.30f), Color.Transparent),
+                    center = Offset(glow.centerX, glow.centerY),
+                    radius = maxOf(glow.width, glow.height) * 0.75f,
+                ),
+                topLeft = Offset(glow.left, glow.top),
+                size = Size(glow.width.coerceAtLeast(1f), glow.height.coerceAtLeast(1f)),
+                cornerRadius = CornerRadius(TEXT_CORNER_PX + SELECTION_GLOW_PX),
+            )
+            drawRoundRectFill(rect, ScanCyan.copy(alpha = 0.06f))
+            drawRoundRect(
+                color = ScanCyan,
+                topLeft = Offset(rect.left, rect.top),
+                size = Size(rect.width.coerceAtLeast(1f), rect.height.coerceAtLeast(1f)),
+                cornerRadius = CornerRadius(TEXT_CORNER_PX),
+                style = Stroke(width = SELECTION_STROKE_PX),
+            )
         }
 
+        // ---- Region marquee ----------------------------------------------------------------
         regionRect?.let { rect ->
-            drawRoundRectFill(rect, IrisViolet.copy(alpha = 0.16f))
-            drawRoundRectStroke(rect, IrisViolet)
+            drawRoundRectFill(rect, IrisViolet.copy(alpha = 0.12f))
+            drawRoundRect(
+                color = IrisViolet,
+                topLeft = Offset(rect.left, rect.top),
+                size = Size(rect.width.coerceAtLeast(1f), rect.height.coerceAtLeast(1f)),
+                cornerRadius = CornerRadius(TEXT_CORNER_PX),
+                style = Stroke(
+                    width = SELECTION_STROKE_PX,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f)),
+                ),
+            )
         }
     }
 }
+
+private fun TextRect.toRoundRect(radius: Float) = RoundRect(
+    left = left,
+    top = top,
+    right = right,
+    bottom = bottom,
+    cornerRadius = CornerRadius(radius),
+)
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoundRectStroke(
     rect: TextRect,
@@ -397,6 +479,11 @@ fun ScanningBanner(
 private const val SLOW_SCAN_HINT_MS = 2_500L
 
 private const val TOUCH_TOLERANCE_DP = 12
-private const val OUTLINE_PADDING_PX = 2f
-private const val CORNER_RADIUS_PX = 6f
+
+/** Breathing room around a recognised line, so the cut-out never clips a descender. */
+private const val TEXT_PADDING_PX = 4f
+private const val TEXT_CORNER_PX = 7f
+private const val CORNER_RADIUS_PX = 7f
+private const val SELECTION_STROKE_PX = 2.2f
+private const val SELECTION_GLOW_PX = 7f
 private const val MIN_REGION_PX = 24f

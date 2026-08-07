@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.copyeye.app.AppContainer
 import com.copyeye.app.core.state.CopyEyeBus
-import com.copyeye.app.ui.theme.IrisViolet
+import com.copyeye.app.ui.components.IrisMark
 import kotlinx.coroutines.launch
 
 private const val PERMISSIONS_PAGE = 1
@@ -125,16 +125,8 @@ fun OnboardingScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = IrisViolet.copy(alpha = 0.16f),
-                    modifier = Modifier.size(96.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Surface(shape = CircleShape, color = IrisViolet, modifier = Modifier.size(34.dp)) {}
-                    }
-                }
-                Spacer(Modifier.height(28.dp))
+                IrisMark(modifier = Modifier.size(132.dp))
+                Spacer(Modifier.height(24.dp))
                 Text(
                     text = page.title,
                     style = MaterialTheme.typography.headlineMedium,

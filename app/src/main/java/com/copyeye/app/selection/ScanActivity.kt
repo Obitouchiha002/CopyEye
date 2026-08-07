@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -181,6 +182,18 @@ class ScanActivity : ComponentActivity() {
             }
         }
 
+        // The toolbar reports its own height so the frozen frame can be fitted above it. Measuring
+        // rather than hard-coding keeps them in step when the smart-action chips appear.
+        var toolbarHeightPx by androidx.compose.runtime.remember {
+            androidx.compose.runtime.mutableStateOf(0f)
+        }
+        // Collapsed to start: the frozen frame is fitted above the toolbar, so every dp the bar
+        // takes is a dp of the user's screen shown smaller. Copy is the only control most scans
+        // need, and it stays visible either way — the rest is one tap on the handle away.
+        var toolbarExpanded by androidx.compose.runtime.remember {
+            androidx.compose.runtime.mutableStateOf(false)
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
             when (state) {
                 is ScanUiState.Scanning -> {
@@ -213,6 +226,7 @@ class ScanActivity : ComponentActivity() {
                         onDragStart = viewModel::onDragStart,
                         onDragTo = viewModel::onDragTo,
                         onRegion = viewModel::onRegionSelected,
+                        bottomInsetPx = toolbarHeightPx,
                     )
 
                     SelectionToolbar(
@@ -239,10 +253,13 @@ class ScanActivity : ComponentActivity() {
                         onShare = onShare,
                         onSmartAction = onOpenSmartAction,
                         onClose = onClose,
+                        expanded = toolbarExpanded,
+                        onToggleExpanded = { toolbarExpanded = !toolbarExpanded },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                            .padding(horizontal = 12.dp, vertical = 12.dp)
+                            .onSizeChanged { toolbarHeightPx = it.height.toFloat() },
                     )
 
                     CopiedToast(

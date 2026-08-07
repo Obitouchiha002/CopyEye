@@ -1,6 +1,8 @@
 package com.copyeye.app.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,7 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.copyeye.app.AppContainer
 import com.copyeye.app.core.state.CopyEyeBus
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import com.copyeye.app.ui.components.IrisMark
 import com.copyeye.app.ui.components.SettingsNavigationRow
+import com.copyeye.app.ui.theme.IrisViolet
 import com.copyeye.app.ui.components.SettingsSection
 import com.copyeye.app.ui.nav.Route
 import com.copyeye.app.ui.theme.SuccessGreen
@@ -70,7 +78,7 @@ fun HomeScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            StatusCard(running = serviceRunning, canDrawOverlays = canDrawOverlays)
+            HeroCard(running = serviceRunning, canDrawOverlays = canDrawOverlays)
 
             Spacer(Modifier.height(8.dp))
 
@@ -80,12 +88,20 @@ fun HomeScreen(
                         onClick = {
                             if (canDrawOverlays) onStartService() else onRequestOverlayPermission()
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                     ) {
-                        Text(if (canDrawOverlays) "Start CopyEye" else "Allow floating eye")
+                        Text(
+                            text = if (canDrawOverlays) "Start CopyEye" else "Allow floating eye",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                     }
                 } else {
-                    OutlinedButton(onClick = onStopService, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onStopService,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                    ) {
                         Text("Stop CopyEye")
                     }
                 }
@@ -165,48 +181,96 @@ fun HomeScreen(
     }
 }
 
+/**
+ * The top of Home: Iris herself, the one sentence that matters, and nothing else.
+ *
+ * An earlier version led with a status dot and a paragraph. It was accurate and completely
+ * forgettable. The character is the product's whole personality, so she gets the space — and the
+ * status becomes a small pill under her rather than the headline.
+ */
 @Composable
-private fun StatusCard(running: Boolean, canDrawOverlays: Boolean) {
-    val (title, body, tint) = when {
+private fun HeroCard(running: Boolean, canDrawOverlays: Boolean) {
+    val (headline, body, tint) = when {
         running -> Triple(
-            "CopyEye is on",
-            "Tap Iris at the edge of your screen to scan. Drag to move it. CopyEye has no access " +
-                "to your screen until you tap.",
+            "Iris is watching your edge",
+            "Tap her over any app to grab the text. Drag to move her.",
             SuccessGreen,
         )
         !canDrawOverlays -> Triple(
-            "Floating eye is blocked",
-            "Android needs permission to draw CopyEye over other apps.",
+            "One permission away",
+            "Android needs to let CopyEye draw over other apps.",
             WarnAmber,
         )
         else -> Triple(
-            "CopyEye is off",
-            "Turn it on to start copying text from your screen.",
+            "Ready when you are",
+            "Turn CopyEye on and Iris appears at the edge of your screen.",
             WarnAmber,
         )
     }
 
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        Surface(
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Surface(shape = CircleShape, color = tint, modifier = Modifier.size(12.dp)) {}
-            Column {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                IrisViolet.copy(alpha = 0.14f),
+                                Color.Transparent,
+                            ),
+                        ),
+                    )
+                    .padding(top = 28.dp, bottom = 24.dp, start = 24.dp, end = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                IrisMark(
+                    animate = running,
+                    modifier = Modifier.size(112.dp),
+                )
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = headline,
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
+                Spacer(Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = tint.copy(alpha = 0.16f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = tint,
+                            modifier = Modifier.size(8.dp),
+                        ) {}
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (running) "On · reads only when you tap" else "Off",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
             }
         }
     }

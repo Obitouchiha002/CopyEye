@@ -1,5 +1,7 @@
 package com.copyeye.app.selection
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,18 +62,38 @@ fun SelectionToolbar(
     onShare: () -> Unit,
     onSmartAction: (SmartAction) -> Unit,
     onClose: () -> Unit,
+    expanded: Boolean = true,
+    onToggleExpanded: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 4.dp,
-        shadowElevation = 8.dp,
+        shadowElevation = 14.dp,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
 
-            if (smartActions.isNotEmpty()) {
+            // A grab handle that also collapses the bar. The toolbar sits over the bottom of the
+            // captured screen, which on a video is exactly where the subtitles are — so there has
+            // to be a way to get it out of the way without closing the scan.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .clickable(onClick = onToggleExpanded),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                    modifier = Modifier.width(36.dp).height(4.dp),
+                ) {}
+            }
+
+            if (smartActions.isNotEmpty() && expanded) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -91,46 +113,50 @@ fun SelectionToolbar(
                 Spacer(Modifier.height(8.dp))
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SelectionMode.entries.forEach { candidate ->
-                    FilterChip(
-                        selected = mode == candidate && !regionMode,
-                        onClick = { onModeChange(candidate) },
-                        label = { Text(candidate.label) },
-                    )
-                }
-            }
+            AnimatedVisibility(visible = expanded) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SelectionMode.entries.forEach { candidate ->
+                            FilterChip(
+                                selected = mode == candidate && !regionMode,
+                                onClick = { onModeChange(candidate) },
+                                label = { Text(candidate.label) },
+                            )
+                        }
+                    }
 
-            Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(4.dp))
 
             // The secondary actions get their own scrolling row. They used to share a row with
             // Copy, and on a 1080p phone the six icons consumed the entire width — which left the
             // weighted Copy button at zero width. The single most important control in the app was
             // invisible. It now owns a full-width row of its own, below everything else and inside
             // easy thumb reach.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ToolbarIcon(Icons.Rounded.SelectAll, "Copy all", onCopyAll)
-                ToolbarIcon(Icons.Rounded.Edit, "Edit before copying", onEdit)
-                ToolbarIcon(
-                    icon = Icons.Rounded.Crop,
-                    description = if (regionMode) "Cancel region select" else "Select a region",
-                    onClick = onToggleRegion,
-                )
-                ToolbarIcon(Icons.Rounded.Refresh, "Rescan", onRescan)
-                ToolbarIcon(Icons.Rounded.Share, "Share", onShare)
-                ToolbarIcon(Icons.Rounded.Close, "Close", onClose)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ToolbarIcon(Icons.Rounded.SelectAll, "Copy all", onCopyAll)
+                        ToolbarIcon(Icons.Rounded.Edit, "Edit before copying", onEdit)
+                        ToolbarIcon(
+                            icon = Icons.Rounded.Crop,
+                            description = if (regionMode) "Cancel region select" else "Select a region",
+                            onClick = onToggleRegion,
+                        )
+                        ToolbarIcon(Icons.Rounded.Refresh, "Rescan", onRescan)
+                        ToolbarIcon(Icons.Rounded.Share, "Share", onShare)
+                        ToolbarIcon(Icons.Rounded.Close, "Close", onClose)
+                    }
+                }
             }
 
             Spacer(Modifier.height(6.dp))
@@ -138,14 +164,19 @@ fun SelectionToolbar(
             Button(
                 onClick = onCopy,
                 enabled = hasSelection,
+                shape = RoundedCornerShape(18.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(54.dp),
             ) {
                 Icon(Icons.Rounded.ContentCopy, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (hasSelection) "Copy" else "Tap text to select")
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = if (hasSelection) "Copy" else "Tap text to select",
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
+            Spacer(Modifier.height(2.dp))
         }
     }
 }
