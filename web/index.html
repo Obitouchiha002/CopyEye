@@ -284,14 +284,22 @@ p { margin: 0; max-width: var(--measure); }
   color: var(--lit);
   position: relative;
   white-space: nowrap;
+  display: inline-block;
+  /* An inline-block with line-height 1 makes the box hug the word instead of
+     the line box, which on a 100px headline is nearly twice as tall. */
+  line-height: 1;
+  padding: .05em .1em;
+  /* Only the right edge is pulled back in; a negative left margin lets the
+     box collide with the word before it. */
+  margin: 0 -.1em -.06em .02em;
 }
 .lit::after {
   content: "";
   position: absolute;
-  inset: -.12em -.22em;
-  border: 1px solid color-mix(in srgb, var(--beam) 70%, transparent);
-  border-radius: 4px;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--beam) 26%, transparent);
+  inset: 0;
+  border: 1.5px solid color-mix(in srgb, var(--beam) 78%, transparent);
+  border-radius: 5px;
+  box-shadow: 0 0 26px color-mix(in srgb, var(--beam) 24%, transparent);
   pointer-events: none;
 }
 .dim { color: var(--text-2); }
@@ -402,30 +410,42 @@ p { margin: 0; max-width: var(--measure); }
   height: 100%;
   border-radius: 26px;
   overflow: hidden;
-  background: #1E1A2E;
+  background: #2A2140;
   isolation: isolate;
 }
 .screen__noise {
   position: absolute;
   inset: 0;
-  opacity: .55;
-  z-index: 0;
+  /* Just enough grain to read as camera footage. Any more and the frame turns
+     into a dark smudge, which is the opposite of "look how clearly it reads". */
+  opacity: .16;
+  mix-blend-mode: overlay;
+  z-index: 1;
 }
 .screen__grad {
   position: absolute;
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(120% 80% at 20% 12%, #4A3E7A 0%, transparent 60%),
-    radial-gradient(120% 90% at 85% 88%, #7A3E5E 0%, transparent 62%),
-    #241F3A;
+    radial-gradient(80% 55% at 24% 16%, #FFC46B 0%, transparent 58%),
+    radial-gradient(90% 60% at 82% 26%, #FF7A6B 0%, transparent 60%),
+    radial-gradient(120% 70% at 50% 104%, #1B2A5E 0%, transparent 70%),
+    linear-gradient(168deg, #F0885E 0%, #A25BA8 46%, #2A2F6B 100%);
+}
+/* A horizon line, so the frame reads as a photograph rather than a swatch. */
+.screen__grad::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 54%;
+  height: 46%;
+  background: linear-gradient(180deg, rgba(20,26,60,.15), rgba(9,12,32,.82));
 }
 /* The dim that a scan drops over everything. */
 .screen__dim {
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: rgba(0, 0, 0, .52);
+  background: rgba(4, 5, 12, .62);
   opacity: 0;
   transition: opacity .34s ease;
 }
@@ -455,7 +475,7 @@ p { margin: 0; max-width: var(--measure); }
 .line {
   position: relative;
   color: #fff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, .85);
+  text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 2px 14px rgba(0,0,0,.7);
   align-self: flex-start;
   max-width: 100%;
   padding: 2px 5px;
@@ -463,17 +483,20 @@ p { margin: 0; max-width: var(--measure); }
   border-radius: 5px;
   transition: box-shadow .3s ease, background .3s ease;
 }
-.line--hi { font-size: 17px; font-weight: 700; line-height: 1.3; }
-.line--en { font-size: 13.5px; line-height: 1.35; }
+.line--hi { font-size: 18px; font-weight: 750; line-height: 1.28; letter-spacing: -.01em; }
+.line--en { font-size: 14px; line-height: 1.4; font-weight: 520; }
 .line--tag { font-size: 12.5px; color: #E9DFFF; }
 /* "Lit" = a hole punched in the dim, matching what the app really does. */
 .is-ready .line { box-shadow: 0 0 0 400px rgba(0,0,0,0) inset; }
+/* The dim is punched out behind each recognised line, so the words are the
+   only thing left at full brightness — the same trick the app itself plays. */
 .is-ready .line::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, .045);
+  inset: -1px -3px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .10);
+  box-shadow: 0 0 20px rgba(255,255,255,.10);
   z-index: -1;
 }
 .line.is-picked {
@@ -785,10 +808,85 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
 .foot a:hover { color: var(--text); }
 .foot__end { margin-left: auto; font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em; }
 
+
+/* ── The 3D eye ────────────────────────────────────────────── */
+.eyewrap {
+  position: relative;
+  aspect-ratio: 1;
+  width: min(560px, 96%);
+  margin-inline: auto;
+}
+#eye {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.eyewrap::after {
+  /* Grounds the eye in the page instead of leaving it floating in a void. */
+  content: "";
+  position: absolute;
+  left: 12%; right: 12%;
+  bottom: 4%;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, color-mix(in srgb, var(--iris) 22%, transparent), transparent 72%);
+  filter: blur(22px);
+  pointer-events: none;
+}
+.eyewrap__fallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+}
+.no-webgl #eye { display: none; }
+.no-webgl .eyewrap__fallback { display: grid; }
+.eyewrap__hint {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  opacity: .8;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Depth for the phone: it leans toward the pointer on a real perspective. */
+.tilt { perspective: 1400px; }
+.tilt > * {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
+  transform-style: preserve-3d;
+  transition: transform .28s cubic-bezier(.22,1,.36,1);
+  will-change: transform;
+}
+.tilt .screen__content { transform: translateZ(26px); }
+.tilt .iris { transform: translateZ(46px); }
+.tilt .copied { transform: translate(-50%, 0) translateZ(58px); }
+.is-copied .tilt .copied { transform: translate(-50%, 0) translateZ(58px); }
+
+/* Cards gain a little Z on hover, so depth is a page-wide language. */
+.stage-cell, .script, .spec {
+  transition: transform .3s cubic-bezier(.22,1,.36,1), background .3s ease;
+}
+.stage-cell:hover, .script:hover, .spec:hover {
+  transform: translateY(-4px);
+  background: var(--ink-2);
+}
+
 /* Scroll reveal, kept to a single quiet gesture. */
-.rise { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1); }
-.rise.in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) { .rise { opacity: 1; transform: none; } }
+/* Visible by default. The reveal is opt-in and only arms itself once the
+   script has run — a scroll animation that hides content when JavaScript fails
+   is not an animation, it is a blank page. */
+.js .rise { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1); }
+.js .rise.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .js .rise { opacity: 1; transform: none; } }
 </style>
 </head>
 
@@ -848,7 +946,38 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
         <p class="hero__meta">13 MB · Android 10+ · free · no account · no ads</p>
       </div>
 
-      <div class="stage">
+      <div class="eyewrap">
+        <canvas id="eye" width="1120" height="1120"
+                aria-label="A three-dimensional eye that follows your pointer. A beam of light sweeps across it every few seconds."></canvas>
+        <div class="eyewrap__fallback" aria-hidden="true">
+          <svg width="220" height="220" viewBox="0 0 24 24">
+            <ellipse cx="12" cy="12" rx="11" ry="7.6" fill="none" stroke="currentColor" stroke-width="1"/>
+            <circle cx="12" cy="12" r="4" fill="#7C6CF0"/>
+            <circle cx="12" cy="12" r="1.7" fill="#0B0D14"/>
+          </svg>
+        </div>
+        <p class="eyewrap__hint">move your pointer — she follows</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Litany ───────────────────────────────────────────── -->
+  <section class="band">
+    <div class="wrap rise">
+      <p class="eyebrow">Where it works</p>
+      <p class="litany" id="litany">
+        <span>Videos</span><span>Reels</span><span>Shorts</span><span>Screenshots</span><span>Photos</span><span>Games</span><span>PDFs</span><span>Slides</span><span>Anything that blocks copy</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── How it works ─────────────────────────────────────── -->
+  <section class="band" id="how">
+    <div class="wrap rise">
+      <p class="eyebrow">One tap, start to finish</p>
+      <h2>A scan is four things,<br>and you only do the first.</h2>
+      <div class="split" style="margin-top:44px;align-items:center">
+        <div class="tilt" id="tilt">
         <div class="phone" id="demo" role="img"
              aria-label="A phone playing a video with a Hindi caption. A floating eye is tapped, a scan sweeps the screen, the caption lights up, and a Copied confirmation appears.">
           <div class="screen">
@@ -871,26 +1000,14 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
             </div>
             <div class="iris"></div>
           </div>
+          </div>
         </div>
+        <p class="lede">
+          What you are watching on the left is the real sequence, at the real speed. The frame
+          freezes exactly where your screen was — same size, same position — so your eye never has
+          to go looking for the words it was already reading.
+        </p>
       </div>
-    </div>
-  </section>
-
-  <!-- ── Litany ───────────────────────────────────────────── -->
-  <section class="band">
-    <div class="wrap rise">
-      <p class="eyebrow">Where it works</p>
-      <p class="litany" id="litany">
-        <span>Videos</span><span>Reels</span><span>Shorts</span><span>Screenshots</span><span>Photos</span><span>Games</span><span>PDFs</span><span>Slides</span><span>Anything that blocks copy</span>
-      </p>
-    </div>
-  </section>
-
-  <!-- ── How it works ─────────────────────────────────────── -->
-  <section class="band" id="how">
-    <div class="wrap rise">
-      <p class="eyebrow">One tap, start to finish</p>
-      <h2>A scan is four things,<br>and you only do the first.</h2>
       <div class="stages">
         <div class="stage-cell">
           <b>00:00</b>
@@ -1142,6 +1259,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
 
 <script>
 (() => {
+  document.documentElement.classList.add('js');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ── The hero demo: the product's real sequence, on a loop ── */
@@ -1182,6 +1300,290 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     }
   }
 
+
+  /* ────────────────────────────────────────────────────────────────────────
+     The eye, in WebGL.
+
+     No library — the Artifact CSP blocks external scripts, and a page whose
+     whole argument is "this thing never calls out" should not open with a CDN
+     request. It is one full-canvas fragment shader: a ray is fired per pixel,
+     intersected with a unit sphere, refracted through the cornea, and the iris
+     is sampled *behind* that refraction. That last step is what gives real
+     parallax — rotate the eye and the pupil shifts against the iris the way a
+     lens makes it, rather than sliding like a decal.
+     ──────────────────────────────────────────────────────────────────────── */
+  const cv = document.getElementById('eye');
+  if (cv) {
+    const gl = cv.getContext('webgl', {
+      alpha: true, premultipliedAlpha: false, antialias: true, depth: false
+    }) || cv.getContext('experimental-webgl', { alpha: true, premultipliedAlpha: false });
+
+    if (!gl) {
+      document.documentElement.classList.add('no-webgl');
+    } else {
+      const VS = `
+        attribute vec2 p;
+        void main(){ gl_Position = vec4(p, 0.0, 1.0); }
+      `;
+
+      const FS = `
+        precision highp float;
+        uniform vec2  uRes;
+        uniform float uTime;
+        uniform vec2  uLook;   // where she is looking, -1..1
+        uniform float uBlink;  // 0 open, 1 shut
+        uniform float uScan;   // sweep position 0..1, negative when idle
+        uniform float uLight;  // 1 on a light page ground
+
+        const vec3 IRIS  = vec3(0.486, 0.424, 0.941);
+        const vec3 BEAM  = vec3(0.298, 0.780, 0.910);
+        const vec3 EMBER = vec3(0.941, 0.545, 0.706);
+
+        float hash21(vec2 p){
+          p = fract(p * vec2(123.34, 456.21));
+          p += dot(p, p + 45.32);
+          return fract(p.x * p.y);
+        }
+        float noise(vec2 p){
+          vec2 i = floor(p), f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash21(i), hash21(i + vec2(1.0, 0.0)), f.x),
+                     mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), f.x), f.y);
+        }
+        float fbm(vec2 p){
+          float s = 0.0, a = 0.5;
+          for (int i = 0; i < 5; i++){ s += a * noise(p); p *= 2.03; a *= 0.5; }
+          return s;
+        }
+        mat3 rotX(float a){ float c = cos(a), s = sin(a); return mat3(1.,0.,0., 0.,c,-s, 0.,s,c); }
+        mat3 rotY(float a){ float c = cos(a), s = sin(a); return mat3(c,0.,s, 0.,1.,0., -s,0.,c); }
+
+        void main(){
+          vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / min(uRes.x, uRes.y);
+
+          // The lids. An almond, not a band — this is what makes it an eye
+          // rather than a ball, and it frames the sphere at the same time.
+          float b = 1.0 - uBlink;
+          float top =  (0.315 - 0.85 * uv.x * uv.x) * b + 0.004;
+          float bot = -(0.275 - 0.80 * uv.x * uv.x) * b - 0.004;
+          float inEye = smoothstep(top, top - 0.006, uv.y) *
+                        smoothstep(bot, bot + 0.006, uv.y);
+          if (inEye <= 0.001) { gl_FragColor = vec4(0.0); return; }
+
+          vec3 ro = vec3(0.0, 0.0, 3.05);
+          vec3 rd = normalize(vec3(uv * 2.5, -3.05));
+
+          float bb = dot(ro, rd);
+          float cc = dot(ro, ro) - 1.0;
+          float h  = bb * bb - cc;
+          if (h < 0.0) { gl_FragColor = vec4(0.0); return; }
+
+          float t = -bb - sqrt(h);
+          vec3  p = ro + rd * t;
+          vec3  n = normalize(p);
+
+          mat3 R  = rotY(uLook.x * 0.60) * rotX(-uLook.y * 0.46);
+          mat3 Ri = mat3(R[0][0], R[1][0], R[2][0],
+                         R[0][1], R[1][1], R[2][1],
+                         R[0][2], R[1][2], R[2][2]);
+
+          // Sample the iris through the cornea rather than on it.
+          vec3 rf   = refract(rd, n, 1.0 / 1.34);
+          vec3 deep = p + rf * 0.34;
+          vec3 L    = Ri * deep;
+          vec3 Ls   = Ri * p;
+
+          float r   = length(L.xy);
+          float ang = atan(L.y, L.x);
+
+          // Sclera: not flat white. Warm in the corners, with faint vessels.
+          float away  = length(Ls.xy);
+          float veins = fbm(Ls.xy * 8.0 + 4.0);
+          vec3 sclera = mix(vec3(0.985, 0.980, 0.993), vec3(0.885, 0.850, 0.885),
+                            smoothstep(0.44, 1.06, away) * 0.62);
+          // A little blood under the surface keeps it from reading as plastic.
+          sclera = mix(sclera, vec3(0.93, 0.72, 0.71),
+                       smoothstep(0.62, 0.96, veins) * 0.22 * smoothstep(0.50, 1.0, away));
+
+          float irisR  = 0.50;
+          float pupilR = 0.185 + 0.030 * sin(uTime * 0.55);
+          float rr     = clamp(r / irisR, 0.0, 1.0);
+
+          // Iris: radial fibres at two frequencies, brightest at the collarette.
+          float fib  = fbm(vec2(ang * 10.0, r * 8.0));
+          float fine = fbm(vec2(ang * 26.0, r * 4.0));
+          vec3 iris = mix(IRIS * 1.35, IRIS * 0.22, smoothstep(0.0, 1.0, rr));
+          iris = mix(iris, BEAM * 1.05, fib * 0.42 * (1.0 - rr));
+          iris += EMBER * 0.20 * pow(fine, 2.0) * (1.0 - rr * 0.6);
+          iris *= 0.50 + 0.95 * fib;
+          iris += IRIS * 0.55 * exp(-pow((rr - 0.33) / 0.11, 2.0));   // collarette
+          iris = mix(iris, vec3(0.020, 0.020, 0.055), smoothstep(0.78, 1.0, rr));
+          iris = mix(vec3(0.008, 0.008, 0.016), iris,
+                     smoothstep(pupilR - 0.010, pupilR + 0.020, r));
+
+          float isIris = (1.0 - smoothstep(irisR - 0.010, irisR + 0.004, r)) * step(0.0, L.z);
+          vec3 surf = mix(sclera, iris, isIris);
+
+          // Light
+          vec3 key = normalize(vec3(-0.42, 0.60, 0.78));
+          float dif = clamp(dot(n, key), 0.0, 1.0);
+          surf *= (0.70 + 0.14 * n.y) + dif * 0.42;
+
+          // Two catchlights. The small cool one is what sells the wet surface.
+          vec3 hv = normalize(key - rd);
+          surf += vec3(1.0) * pow(clamp(dot(n, hv), 0.0, 1.0), 190.0) * 1.15;
+          surf += BEAM * pow(clamp(dot(n, normalize(vec3(0.52, -0.32, 0.79))), 0.0, 1.0), 320.0) * 0.45;
+
+          float fres = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0);
+          surf += mix(IRIS, BEAM, 0.45) * fres * 0.62;
+
+          // The sweep, the app's own gesture.
+          if (uScan >= 0.0) {
+            float y = uv.y * 1.6 + 0.5;
+            float d = y - uScan;
+            vec3 sweepCol = mix(IRIS, mix(BEAM, EMBER, clamp(uv.x + 0.5, 0.0, 1.0)), 0.62);
+            surf += sweepCol * exp(-d * d / 0.0022) * 1.30;
+            surf += sweepCol * exp(-d * d / 0.045)  * 0.22;
+          }
+
+          // Lid shadow, so the sphere sits under the lids instead of on them.
+          float lidShade = smoothstep(top, top - 0.085, uv.y) * smoothstep(bot, bot + 0.095, uv.y);
+          surf *= 0.68 + 0.32 * lidShade;
+
+          // On a light ground the bright sclera would dissolve into the page.
+          // On a light page the sclera would dissolve into the ground, so the
+          // whole eye is seated a shade deeper and given a defining edge.
+          float edge = smoothstep(0.86, 1.0, away);
+          surf = mix(surf, surf * 0.90 - vec3(0.015) - edge * 0.10, uLight);
+
+          gl_FragColor = vec4(surf, inEye);
+        }
+      `;
+
+      const compile = (type, srcTxt) => {
+        const sh = gl.createShader(type);
+        gl.shaderSource(sh, srcTxt);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+          console.warn(gl.getShaderInfoLog(sh));
+          return null;
+        }
+        return sh;
+      };
+      const vs = compile(gl.VERTEX_SHADER, VS);
+      const fs = compile(gl.FRAGMENT_SHADER, FS);
+
+      if (!vs || !fs) {
+        document.documentElement.classList.add('no-webgl');
+      } else {
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+        gl.useProgram(prog);
+
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+        const loc = gl.getAttribLocation(prog, 'p');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        const U = n => gl.getUniformLocation(prog, n);
+        const uRes = U('uRes'), uTime = U('uTime'), uLook = U('uLook'),
+              uBlink = U('uBlink'), uScan = U('uScan'), uLight = U('uLight');
+
+        // Where she is looking. Eases toward the pointer instead of snapping —
+        // an eye that tracks with zero lag reads as a cursor, not a creature.
+        let want = [0, 0], have = [0, 0];
+        const aim = (cx, cy) => {
+          const b = cv.getBoundingClientRect();
+          want = [
+            Math.max(-1, Math.min(1, (cx - (b.left + b.width  / 2)) / (b.width  * 0.85))),
+            Math.max(-1, Math.min(1, (cy - (b.top  + b.height / 2)) / (b.height * 0.85)))
+          ];
+        };
+        addEventListener('pointermove', e => aim(e.clientX, e.clientY), { passive: true });
+        addEventListener('pointerleave', () => { want = [0, 0]; }, { passive: true });
+
+        const size = () => {
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          const w = Math.round(cv.clientWidth  * dpr);
+          const h = Math.round(cv.clientHeight * dpr);
+          if (cv.width !== w || cv.height !== h) {
+            cv.width = w; cv.height = h;
+            gl.viewport(0, 0, w, h);
+          }
+        };
+
+        let visible = true;
+        new IntersectionObserver(es => { visible = es[0].isIntersecting; }, { threshold: 0 }).observe(cv);
+
+        const isLight = () => {
+          const forced = document.documentElement.getAttribute('data-theme');
+          if (forced) return forced === 'light';
+          return !matchMedia('(prefers-color-scheme: dark)').matches;
+        };
+
+        // Blinks land on an irregular beat; a metronome reads as a machine.
+        // The sweep runs on its own, slower cycle so the two rarely coincide.
+        const t0 = performance.now();
+        const now = () => (performance.now() - t0) / 1000;
+
+        let lastBlink = -9, nextBlink = 2.4;
+        let lastScan  = -9, nextScan  = 5.0;
+
+        const frame = () => {
+          requestAnimationFrame(frame);
+          if (!visible) return;
+          size();
+
+          const t = now();
+          have[0] += (want[0] - have[0]) * 0.075;
+          have[1] += (want[1] - have[1]) * 0.075;
+
+          if (!reduce) {
+            if (t > nextBlink) { lastBlink = t; nextBlink = t + 2.8 + Math.random() * 4.4; }
+            if (t > nextScan)  { lastScan  = t; nextScan  = t + 7.5 + Math.random() * 3.5; }
+          }
+
+          // Shut fast, open slower — that asymmetry is most of what makes a
+          // blink read as a blink rather than a flicker.
+          const sinceBlink = t - lastBlink;
+          let lid = 0;
+          if (sinceBlink < 0.09)      lid = sinceBlink / 0.09;
+          else if (sinceBlink < 0.26) lid = 1 - (sinceBlink - 0.09) / 0.17;
+
+          const sinceScan = t - lastScan;
+          const scan = sinceScan < 1.25 ? (sinceScan / 1.25) * 1.6 - 0.25 : -1;
+
+          gl.uniform2f(uRes, cv.width, cv.height);
+          gl.uniform1f(uTime, t);
+          gl.uniform2f(uLook, have[0], have[1]);
+          gl.uniform1f(uBlink, reduce ? 0 : lid);
+          gl.uniform1f(uScan, reduce ? -1 : scan);
+          gl.uniform1f(uLight, isLight() ? 1 : 0);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+        };
+
+        requestAnimationFrame(frame);
+      }
+    }
+  }
+
+  /* ── The phone leans toward the pointer ── */
+  const tilt = document.getElementById('tilt');
+  if (tilt && !reduce && matchMedia('(hover: hover)').matches) {
+    addEventListener('pointermove', e => {
+      const b = tilt.getBoundingClientRect();
+      const x = (e.clientX - (b.left + b.width / 2)) / b.width;
+      const y = (e.clientY - (b.top + b.height / 2)) / b.height;
+      tilt.style.setProperty('--ry', (x * 13).toFixed(2) + 'deg');
+      tilt.style.setProperty('--rx', (-y * 9).toFixed(2) + 'deg');
+    }, { passive: true });
+  }
+
   /* ── Quiet reveal on scroll ── */
   const io = new IntersectionObserver((entries, obs) => {
     entries.forEach(e => {
@@ -1191,6 +1593,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     });
   }, { rootMargin: '0px 0px -12% 0px' });
   document.querySelectorAll('.rise').forEach(el => io.observe(el));
+  setTimeout(() => document.querySelectorAll('.rise:not(.in)').forEach(el => el.classList.add('in')), 2500);
 
   /* ── The litany lights word by word, the way a scan resolves ── */
   const litany = document.getElementById('litany');
