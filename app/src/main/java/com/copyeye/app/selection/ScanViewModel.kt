@@ -321,6 +321,20 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
         return if (state.editing) state.editedText else selectionEngine.textOf(state.selection)
     }
 
+    /**
+     * True when what the user has chosen sits in the lower half of the frame.
+     *
+     * The toolbar uses it to move to the opposite end. Answering in *bitmap* space rather than
+     * screen space keeps this out of the drawing layer entirely — the frozen frame is shown at 1:1
+     * over the whole screen, so the two halves are the same halves.
+     */
+    fun selectionInLowerHalf(): Boolean {
+        val rects = highlightRects()
+        if (rects.isEmpty()) return false
+        val height = frame?.bitmap?.height?.takeIf { it > 0 } ?: return false
+        return rects.map { it.centerY }.average() > height / 2.0
+    }
+
     fun highlightRects(): List<TextRect> {
         val state = _uiState.value as? ScanUiState.Ready ?: return emptyList()
         return engine?.highlightsFor(state.selection).orEmpty()

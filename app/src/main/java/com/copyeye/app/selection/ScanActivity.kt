@@ -12,6 +12,8 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -23,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -182,16 +183,8 @@ class ScanActivity : ComponentActivity() {
             }
         }
 
-        // The toolbar reports its own height so the frozen frame can be fitted above it. Measuring
-        // rather than hard-coding keeps them in step when the smart-action chips appear.
-        var toolbarHeightPx by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf(0f)
-        }
-        // Collapsed to start: the frozen frame is fitted above the toolbar, so every dp the bar
-        // takes is a dp of the user's screen shown smaller. Copy is the only control most scans
-        // need, and it stays visible either way — the rest is one tap on the handle away.
         var toolbarExpanded by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf(false)
+            androidx.compose.runtime.mutableStateOf(true)
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -226,9 +219,23 @@ class ScanActivity : ComponentActivity() {
                         onDragStart = viewModel::onDragStart,
                         onDragTo = viewModel::onDragTo,
                         onRegion = viewModel::onRegionSelected,
-                        bottomInsetPx = toolbarHeightPx,
                     )
 
+                    // The frozen frame is shown at 1:1 over the whole screen so the scan looks
+                    // like the screen the user was already on, not a photograph of it. That means
+                    // the toolbar genuinely covers something — so it only appears once there is a
+                    // selection to act on, and it appears at whichever end the selection is not.
+                    val anchorTop = viewModel.selectionInLowerHalf()
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = state.hasSelection,
+                        enter = androidx.compose.animation.fadeIn() +
+                            androidx.compose.animation.slideInVertically {
+                                if (anchorTop) -it / 2 else it / 2
+                            },
+                        exit = androidx.compose.animation.fadeOut(),
+                        modifier = Modifier
+                            .align(if (anchorTop) Alignment.TopCenter else Alignment.BottomCenter),
+                    ) {
                     SelectionToolbar(
                         hasSelection = state.hasSelection,
                         mode = state.mode,
@@ -255,20 +262,54 @@ class ScanActivity : ComponentActivity() {
                         onClose = onClose,
                         expanded = toolbarExpanded,
                         onToggleExpanded = { toolbarExpanded = !toolbarExpanded },
+                        handleAtBottom = anchorTop,
+                        modifier = Modifier
+                            .then(
+                                if (anchorTop) {
+                                    Modifier.statusBarsPadding()
+                                } else {
+                                    Modifier.navigationBarsPadding()
+                                },
+                            )
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                    )
+                    }
+
+                    // Before anything is chosen there is nothing to act on, so the screen stays
+                    // clear apart from one small pill: what to do, and a way out.
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !state.hasSelection,
+                        enter = androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.fadeOut(),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 12.dp)
-                            .onSizeChanged { toolbarHeightPx = it.height.toFloat() },
-                    )
+                            .padding(bottom = 20.dp),
+                    ) {
+                        SelectionHint(
+                            modeLabel = state.mode.name,
+                            onCycleMode = {
+                                viewModel.setMode(
+                                    SelectionMode.entries[
+                                        (state.mode.ordinal + 1) % SelectionMode.entries.size
+                                    ],
+                                )
+                            },
+                            onCopyAll = {
+                                if (viewModel.copyAll()) closeRequested = true
+                                notifyCopied()
+                            },
+                            onClose = onClose,
+                        )
+                    }
 
                     CopiedToast(
                         visible = state.justCopied,
                         characterCount = viewModel.selectedText().length,
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(bottom = 180.dp),
+                            .align(if (anchorTop) Alignment.BottomCenter else Alignment.TopCenter)
+                            .systemBarsPadding()
+                            .padding(vertical = 40.dp),
                     )
 
                     if (state.editing) {

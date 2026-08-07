@@ -21,7 +21,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -487,3 +490,48 @@ private const val CORNER_RADIUS_PX = 7f
 private const val SELECTION_STROKE_PX = 2.2f
 private const val SELECTION_GLOW_PX = 7f
 private const val MIN_REGION_PX = 24f
+
+
+/**
+ * What is on screen before anything has been selected.
+ *
+ * Deliberately tiny. The frozen frame is the user's own screen at 1:1, and the whole point of that
+ * is that it does not feel like a photograph of their screen — so until there is a selection to act
+ * on, the interface gets out of the way and says only what to do next.
+ */
+@Composable
+fun SelectionHint(
+    modeLabel: String,
+    onCycleMode: () -> Unit,
+    onCopyAll: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = RoundedCornerShape(percent = 50),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        shadowElevation = 10.dp,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Tap text to copy",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.width(12.dp))
+            TextButton(onClick = onCycleMode, contentPadding = PaddingValues(horizontal = 10.dp)) {
+                Text(modeLabel, style = MaterialTheme.typography.labelMedium)
+            }
+            TextButton(onClick = onCopyAll, contentPadding = PaddingValues(horizontal = 10.dp)) {
+                Text("All", style = MaterialTheme.typography.labelMedium)
+            }
+            IconButton(onClick = onClose) {
+                Icon(Icons.Rounded.Close, contentDescription = "Close")
+            }
+        }
+    }
+}

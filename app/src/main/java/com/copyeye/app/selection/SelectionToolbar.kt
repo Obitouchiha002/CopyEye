@@ -64,6 +64,8 @@ fun SelectionToolbar(
     onClose: () -> Unit,
     expanded: Boolean = true,
     onToggleExpanded: () -> Unit = {},
+    /** True when the bar is pinned to the top, so the handle belongs on its lower edge. */
+    handleAtBottom: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -75,23 +77,7 @@ fun SelectionToolbar(
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
 
-            // A grab handle that also collapses the bar. The toolbar sits over the bottom of the
-            // captured screen, which on a video is exactly where the subtitles are — so there has
-            // to be a way to get it out of the way without closing the scan.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp)
-                    .clickable(onClick = onToggleExpanded),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-                    modifier = Modifier.width(36.dp).height(4.dp),
-                ) {}
-            }
+            if (!handleAtBottom) GrabHandle(onToggleExpanded)
 
             if (smartActions.isNotEmpty() && expanded) {
                 Row(
@@ -177,7 +163,28 @@ fun SelectionToolbar(
                 )
             }
             Spacer(Modifier.height(2.dp))
+
+            if (handleAtBottom) GrabHandle(onToggleExpanded)
         }
+    }
+}
+
+/** Collapses and expands the bar, and reads as something you can drag. */
+@Composable
+private fun GrabHandle(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(24.dp)
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+            modifier = Modifier.width(36.dp).height(4.dp),
+        ) {}
     }
 }
 
