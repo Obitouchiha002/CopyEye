@@ -629,10 +629,10 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   letter-spacing: -.042em;
   font-weight: 700;
 }
-.litany span { color: var(--text-2); transition: color .3s ease; }
-.litany span::after { content: "."; color: var(--iris); }
-.litany span + span { margin-left: .32em; }
-.litany span.on { color: var(--text); }
+.litany > span { color: var(--text-2); transition: color .3s ease; }
+.litany > span::after { content: "."; color: var(--iris); }
+.litany > span + span { margin-left: .32em; }
+.litany > span.on { color: var(--text); }
 
 /* ── The scan, timed ───────────────────────────────────────── */
 .stages {
@@ -1070,6 +1070,98 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   main.panes { scroll-behavior: auto; }
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   Scroll motion.
+
+   The reference for this is ds-k.site, which drives it with GSAP
+   ScrollTrigger plus an IntersectionObserver at threshold .2. The effects here
+   are the same shapes done with native APIs — `animation-timeline: view()`
+   where the browser has it, an observer everywhere else — because a page whose
+   argument is "this app never calls out" cannot open with a CDN request for an
+   animation library.
+
+   Everything is scoped to one idea: text resolving out of nothing, the way the
+   app resolves text out of a screen. Scattered effects would read as noise.
+   ───────────────────────────────────────────────────────────── */
+
+/* Words arrive one after another, rising and lighting up. */
+.w {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(.42em);
+  filter: blur(6px);
+}
+.is-anim .w {
+  animation: wordIn .62s cubic-bezier(.2, .7, .25, 1) forwards;
+  animation-delay: calc(var(--i) * 42ms);
+}
+@keyframes wordIn {
+  from { opacity: 0; transform: translateY(.42em); filter: blur(6px); }
+  to   { opacity: 1; transform: none;              filter: blur(0); }
+}
+.no-js .w, .js .rise:not(.in) .w { opacity: 1; transform: none; filter: none; }
+
+/* A thin scan of the page's own progress, in the app's own gradient. */
+.progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 80;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: var(--sweep);
+  pointer-events: none;
+}
+@supports (animation-timeline: scroll()) {
+  .progress {
+    animation: grow linear both;
+    animation-timeline: scroll(root block);
+  }
+  @keyframes grow { to { transform: scaleX(1); } }
+}
+
+/* The eye holds still while the words move past her — the pinned-hero move,
+   and thematically the right one: she is the thing that watches. */
+@media (min-width: 901px) {
+  .eyewrap {
+    position: sticky;
+    top: calc(50vh - 300px);
+  }
+  .hero__grid { align-items: start; }
+}
+
+/* Depth on scroll: the phone drifts slower than the column beside it. */
+@supports (animation-timeline: view()) {
+  @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+    .tilt {
+      animation: drift linear both;
+      animation-timeline: view();
+      animation-range: entry 10% exit 90%;
+    }
+    @keyframes drift { from { translate: 0 44px; } to { translate: 0 -44px; } }
+
+    .stage-cell {
+      animation: cellIn linear both;
+      animation-timeline: view();
+      animation-range: entry 8% entry 46%;
+    }
+    @keyframes cellIn {
+      from { opacity: 0; transform: translateY(26px); }
+      to   { opacity: 1; transform: none; }
+    }
+  }
+}
+
+/* Counters tick up rather than simply appearing. */
+.spec dd .num { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .w { opacity: 1; transform: none; filter: none; animation: none !important; }
+  .progress { display: none; }
+  .eyewrap { position: static; }
+}
+
 /* Scroll reveal, kept to a single quiet gesture. */
 /* Visible by default. The reveal is opt-in and only arms itself once the
    script has run — a scroll animation that hides content when JavaScript fails
@@ -1090,6 +1182,8 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
     <feColorMatrix values="0 0 0 0 0.55  0 0 0 0 0.45  0 0 0 0 0.8  0 0 0 0.42 0"/>
   </filter>
 </svg>
+
+<div class="progress" aria-hidden="true"></div>
 
 <header class="top">
   <div class="wrap top__in">
@@ -1371,11 +1465,11 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
       <dl class="specs">
         <div class="spec">
           <dt>Download</dt>
-          <dd>13&thinsp;MB<small>for most phones</small></dd>
+          <dd>13<small>MB · for most phones</small></dd>
         </div>
         <div class="spec">
           <dt>Runs on</dt>
-          <dd>10+<small>Android 10 and above</small></dd>
+          <dd>10<small>Android 10 and above</small></dd>
         </div>
         <div class="spec">
           <dt>Network calls</dt>
@@ -1931,6 +2025,96 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
       });
     });
   }
+
+
+  /* ────────────────────────────────────────────────────────────────────────
+     Split every heading into words so they can resolve one at a time.
+
+     Done in script rather than in the markup so the HTML a crawler reads — and
+     a reader with this script blocked — is still whole sentences.
+     ──────────────────────────────────────────────────────────────────────── */
+  const splittable = document.querySelectorAll('h1, h2, .litany');
+  if (!reduce) {
+    splittable.forEach(el => {
+      if (el.dataset.split) return;
+      el.dataset.split = '1';
+      let i = 0;
+      const walk = node => {
+        [...node.childNodes].forEach(child => {
+          if (child.nodeType === 3) {
+            const parts = child.textContent.split(/(\s+)/);
+            const frag = document.createDocumentFragment();
+            parts.forEach(part => {
+              if (!part.trim()) { frag.appendChild(document.createTextNode(part)); return; }
+              const s = document.createElement('span');
+              s.className = 'w';
+              s.style.setProperty('--i', i++);
+              s.textContent = part;
+              frag.appendChild(s);
+            });
+            child.replaceWith(frag);
+          } else if (child.nodeType === 1 && !child.classList.contains('w')) {
+            walk(child);
+          }
+        });
+      };
+      walk(el);
+    });
+
+    // The same trigger ds-k.site uses: a fifth of the element in view.
+    const anim = new IntersectionObserver((entries, obs) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('is-anim');
+        obs.unobserve(e.target);
+      });
+    }, { threshold: 0.2 });
+    splittable.forEach(el => anim.observe(el));
+    setTimeout(() => splittable.forEach(el => el.classList.add('is-anim')), 3000);
+  }
+
+  /* Progress bar, for browsers without scroll-driven CSS animations. */
+  const bar = document.querySelector('.progress');
+  if (bar && !CSS.supports('animation-timeline: scroll()') && !reduce) {
+    let ticking = false;
+    const paint = () => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      bar.style.transform = 'scaleX(' + (max > 0 ? scrollY / max : 0) + ')';
+      ticking = false;
+    };
+    addEventListener('scroll', () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+    }, { passive: true });
+    paint();
+  }
+
+  /* The spec numbers count up the first time they are seen. */
+  document.querySelectorAll('.spec dd').forEach(dd => {
+    const raw = dd.firstChild && dd.firstChild.nodeValue ? dd.firstChild.nodeValue.trim() : '';
+    const target = parseFloat(raw);
+    if (!isFinite(target) || reduce) return;
+    const suffix = raw.replace(/^[\d.]+/, '');
+    const node = document.createElement('span');
+    node.className = 'num';
+    node.textContent = '0' + suffix;
+    dd.replaceChild(node, dd.firstChild);
+
+    new IntersectionObserver((es, obs) => {
+      es.forEach(e => {
+        if (!e.isIntersecting) return;
+        obs.unobserve(e.target);
+        const t0 = performance.now();
+        const step = now => {
+          const k = Math.min(1, (now - t0) / 900);
+          // Ease out, so it lands rather than stopping dead.
+          const v = target * (1 - Math.pow(1 - k, 3));
+          node.textContent = (target % 1 ? v.toFixed(1) : Math.round(v)) + suffix;
+          if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }, { threshold: 0.4 }).observe(dd);
+  });
 
   /* ── Quiet reveal on scroll ── */
   const io = new IntersectionObserver((entries, obs) => {
