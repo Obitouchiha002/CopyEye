@@ -991,8 +991,19 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   display: none;
   place-items: center;
 }
-.no-webgl #eye { display: none; }
-.no-webgl .eyewrap__fallback { display: grid; }
+.eyewrap__fallback svg {
+  width: min(82%, 460px);
+  height: auto;
+  animation: fbBreathe 5.2s ease-in-out infinite;
+}
+@keyframes fbBreathe {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.018); }
+}
+/* Shown whenever the shader cannot be: no WebGL context, and also no JS at all —
+   in which case the canvas would otherwise sit there as an empty square. */
+.no-webgl #eye, .no-js #eye { display: none; }
+.no-webgl .eyewrap__fallback, .no-js .eyewrap__fallback { display: grid; }
 @media (hover: none) { .eyewrap__hint { display: none; } }
 .eyewrap__hint {
   position: absolute;
@@ -1174,22 +1185,24 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
    app resolves text out of a screen. Scattered effects would read as noise.
    ───────────────────────────────────────────────────────────── */
 
-/* Words arrive one after another, rising and lighting up. */
-.w {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(.42em);
-  filter: blur(6px);
-}
+/* Words arrive one after another, rising and lighting up.
+
+   The hidden state lives in the keyframes, never in `.w` itself, and the fill
+   is `backwards` rather than `forwards`. That inversion matters: a word's
+   resting state is *visible*, and the animation only borrows it for 620ms.
+   Whatever goes wrong — JS never runs, the observer never fires, the browser
+   does not tick the animation — the failure mode is text that did not animate,
+   not text that is not there. The previous arrangement had the opposite
+   default and hid this headline on every phone. */
+.w { display: inline-block; }
 .is-anim .w {
-  animation: wordIn .62s cubic-bezier(.2, .7, .25, 1) forwards;
+  animation: wordIn .62s cubic-bezier(.2, .7, .25, 1) backwards;
   animation-delay: calc(var(--i) * 42ms);
 }
 @keyframes wordIn {
   from { opacity: 0; transform: translateY(.42em); filter: blur(6px); }
   to   { opacity: 1; transform: none;              filter: blur(0); }
 }
-.no-js .w, .js .rise:not(.in) .w { opacity: 1; transform: none; filter: none; }
 
 /* A thin scan of the page's own progress, in the app's own gradient. */
 .progress {
@@ -1325,11 +1338,45 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
       <div class="eyewrap">
         <canvas id="eye" width="1120" height="1120"
                 aria-label="A three-dimensional eye that follows your pointer. A beam of light sweeps across it every few seconds."></canvas>
+        <!-- What a device without WebGL sees. It is drawn from the same parts as
+             the shader — a lit sphere, an iris with a dark limbal ring, a pupil,
+             one warm specular and one cool rim — so the page keeps its subject
+             rather than falling back to a line-art icon of one. Fibres are
+             thirty-six strokes rotated around the centre, generated below. -->
         <div class="eyewrap__fallback" aria-hidden="true">
-          <svg width="220" height="220" viewBox="0 0 24 24">
-            <ellipse cx="12" cy="12" rx="11" ry="7.6" fill="none" stroke="currentColor" stroke-width="1"/>
-            <circle cx="12" cy="12" r="4" fill="#7C6CF0"/>
-            <circle cx="12" cy="12" r="1.7" fill="#0B0D14"/>
+          <svg viewBox="0 0 400 400" role="img">
+            <defs>
+              <radialGradient id="fbAura" cx="50%" cy="50%" r="50%">
+                <stop offset="55%" stop-color="#6D5CE7" stop-opacity=".26"/>
+                <stop offset="100%" stop-color="#6D5CE7" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="fbSclera" cx="38%" cy="30%" r="78%">
+                <stop offset="0%"   stop-color="#FFFFFF"/>
+                <stop offset="58%"  stop-color="#F2F3F8"/>
+                <stop offset="88%"  stop-color="#D2D5E2"/>
+                <stop offset="100%" stop-color="#AEB2C4"/>
+              </radialGradient>
+              <radialGradient id="fbIris" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#8B7CF6"/>
+                <stop offset="62%"  stop-color="#5A48CE"/>
+                <stop offset="92%"  stop-color="#3B2C93"/>
+                <stop offset="100%" stop-color="#231A63"/>
+              </radialGradient>
+              <radialGradient id="fbSpec" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#FFFFFF" stop-opacity=".95"/>
+                <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+              </radialGradient>
+              <clipPath id="fbIrisClip"><circle cx="200" cy="200" r="74"/></clipPath>
+            </defs>
+
+            <circle cx="200" cy="200" r="190" fill="url(#fbAura)"/>
+            <circle cx="200" cy="200" r="140" fill="url(#fbSclera)"/>
+            <circle cx="200" cy="200" r="74"  fill="url(#fbIris)"/>
+            <g clip-path="url(#fbIrisClip)" stroke="#B9AEFF" stroke-opacity=".30" stroke-width="1.6" id="fbFibres"></g>
+            <circle cx="200" cy="200" r="74"  fill="none" stroke="#1B1440" stroke-opacity=".55" stroke-width="5"/>
+            <circle cx="200" cy="200" r="31"  fill="#08060F"/>
+            <ellipse cx="171" cy="168" rx="27" ry="20" fill="url(#fbSpec)" transform="rotate(-24 171 168)"/>
+            <circle cx="243" cy="238" r="11" fill="#2E9FC4" fill-opacity=".38"/>
           </svg>
         </div>
         <p class="eyewrap__hint">move your pointer — she follows</p>
@@ -1808,6 +1855,22 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
      parallax — rotate the eye and the pupil shifts against the iris the way a
      lens makes it, rather than sliding like a decal.
      ──────────────────────────────────────────────────────────────────────── */
+  /* Thirty-six iris fibres, drawn once. They are markup the shader would have
+     produced procedurally, so they are generated rather than typed out. */
+  const fibres = document.getElementById('fbFibres');
+  if (fibres) {
+    const NS = 'http://www.w3.org/2000/svg';
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * Math.PI * 2;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', 200 + Math.cos(a) * 33);
+      line.setAttribute('y1', 200 + Math.sin(a) * 33);
+      line.setAttribute('x2', 200 + Math.cos(a) * 74);
+      line.setAttribute('y2', 200 + Math.sin(a) * 74);
+      fibres.appendChild(line);
+    }
+  }
+
   const cv = document.getElementById('eye');
   if (cv) {
     const gl = cv.getContext('webgl', {
