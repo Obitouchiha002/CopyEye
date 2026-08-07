@@ -15,3 +15,7 @@ app/build/
 *.jks
 copyeye-test.jks
 keystore.properties
+
+# Vercel CLI credentials for the site deploy — never committed.
+web/.vercel
+web/.env.local

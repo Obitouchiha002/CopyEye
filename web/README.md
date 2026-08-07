@@ -25,7 +25,7 @@ Then point a domain at it and **update these three places to match**:
 | both files → `og:url` and every JSON-LD `@id` | the same URL |
 | `robots.txt` and `sitemap.xml` | the same URL |
 
-They currently all say `https://copyeye.lzworth.in/`.
+They currently all say `https://copyeye.vercel.app/`.
 
 ## The APK
 
@@ -43,7 +43,7 @@ author and the FAQ. What a page cannot do for itself is earn authority, so:
 2. **Link back from the portfolios.** `developer.html` already points at
    `vanshkashyap.lzworth.in` and `techbyvansh.lzworth.in` with `rel="me"`, and declares a
    `Person` with `sameAs` covering both. That half only counts once the other half exists:
-   add a link to `copyeye.lzworth.in` on each portfolio. Mutual links are what let a search
+   add a link to `copyeye.vercel.app` on each portfolio. Mutual links are what let a search
    engine merge the three into one identity, which is what makes a search for the name and a
    search for the app surface each other.
 3. Add an `og-image.png` (1200×630) and reference it from `og:image`; social previews

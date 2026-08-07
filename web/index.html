@@ -6,7 +6,7 @@
 
 <title>CopyEye — Copy any text you can see on your Android screen</title>
 <meta name="description" content="CopyEye lifts text off any Android screen — videos, Reels, Shorts, screenshots, games, PDFs and apps that block selection. English and Hindi, recognised on your phone. No internet permission at all. Free APK, 13 MB, Android 10+.">
-<link rel="canonical" href="https://copyeye.lzworth.in/">
+<link rel="canonical" href="https://copyeye.vercel.app/">
 <meta name="theme-color" content="#0B0D14" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F7F7FB" media="(prefers-color-scheme: light)">
 <meta name="author" content="Vansh Kashyap">
@@ -15,7 +15,7 @@
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CopyEye">
-<meta property="og:url" content="https://copyeye.lzworth.in/">
+<meta property="og:url" content="https://copyeye.vercel.app/">
 <meta property="og:title" content="CopyEye — Copy any text you can see on your Android screen">
 <meta property="og:description" content="Tap a floating eye. Any text on screen becomes selectable — even inside video, images and apps that block copying. English and Hindi, read on your phone. No internet permission at all.">
 <meta property="og:locale" content="en_IN">
@@ -29,7 +29,7 @@
   "@graph": [
     {
       "@type": "SoftwareApplication",
-      "@id": "https://copyeye.lzworth.in/#app",
+      "@id": "https://copyeye.vercel.app/#app",
       "name": "CopyEye",
       "alternateName": "CopyEye — screen text copier",
       "applicationCategory": "UtilitiesApplication",
@@ -37,8 +37,8 @@
       "operatingSystem": "Android 10 and above",
       "softwareVersion": "1.0.0",
       "fileSize": "13MB",
-      "url": "https://copyeye.lzworth.in/",
-      "downloadUrl": "https://copyeye.lzworth.in/#download",
+      "url": "https://copyeye.vercel.app/",
+      "downloadUrl": "https://copyeye.vercel.app/#download",
       "inLanguage": ["en", "hi"],
       "description": "CopyEye puts a small floating eye on your Android screen. Tap it and any visible text becomes selectable and copyable — including text inside videos, Reels, Shorts, photographs, games, PDFs and apps that block selection. Recognition runs entirely on the device in English and Hindi. The app declares no internet permission.",
       "featureList": [
@@ -57,12 +57,12 @@
         "priceCurrency": "INR",
         "availability": "https://schema.org/InStock"
       },
-      "author": { "@id": "https://copyeye.lzworth.in/#vansh" },
-      "creator": { "@id": "https://copyeye.lzworth.in/#vansh" }
+      "author": { "@id": "https://copyeye.vercel.app/#vansh" },
+      "creator": { "@id": "https://copyeye.vercel.app/#vansh" }
     },
     {
       "@type": "Person",
-      "@id": "https://copyeye.lzworth.in/#vansh",
+      "@id": "https://copyeye.vercel.app/#vansh",
       "name": "Vansh Kashyap",
       "jobTitle": "Android and web developer",
       "description": "Indian Android and web developer. Builds CopyEye, StreamGarden, JanamJyot and other independent apps.",
@@ -76,15 +76,15 @@
     },
     {
       "@type": "WebSite",
-      "@id": "https://copyeye.lzworth.in/#website",
-      "url": "https://copyeye.lzworth.in/",
+      "@id": "https://copyeye.vercel.app/#website",
+      "url": "https://copyeye.vercel.app/",
       "name": "CopyEye",
       "inLanguage": "en",
-      "publisher": { "@id": "https://copyeye.lzworth.in/#vansh" }
+      "publisher": { "@id": "https://copyeye.vercel.app/#vansh" }
     },
     {
       "@type": "FAQPage",
-      "@id": "https://copyeye.lzworth.in/#faq",
+      "@id": "https://copyeye.vercel.app/#faq",
       "mainEntity": [
         {
           "@type": "Question",
@@ -1582,9 +1582,16 @@ $ <strong>grep uses-permission AndroidManifest.xml</strong>
 $ <strong>grep INTERNET AndroidManifest.xml</strong>
   <span class="hit">no matches found</span>
 </div>
+        <!-- Said plainly here because Android will contradict the headline otherwise.
+             The app's own manifest asks for no network permission; the text-recognition
+             libraries it is built on declare INTERNET, and Android merges that in. So the
+             permission is on the list, and nothing in CopyEye ever uses it. Better that
+             you read that from us than find it yourself and assume the rest was a lie. -->
         <p style="margin-top:16px;font-size:14px;color:var(--text-2)">
-          The source is public. Check it yourself rather than taking the claim on faith —
-          <a href="https://github.com/Obitouchiha002/CopyEye" style="color:var(--beam)">github.com/Obitouchiha002/CopyEye</a>.
+          One honest footnote: Android will show <em>INTERNET</em> among CopyEye's
+          permissions. It arrives with Google's on-device text-recognition libraries, not
+          from anything here — no screen, no scan and no copied word is ever sent anywhere.
+          Turn the phone to aeroplane mode and every part of the app still works.
         </p>
       </div>
     </div>
@@ -1687,18 +1694,22 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
       <div class="dl">
         <p class="eyebrow">Get it</p>
         <h2>Put an eye<br>on your screen.</h2>
+        <!-- Both files sit on this domain. A download that hands you off to another
+             site is a download that can fail for reasons you cannot see, so neither
+             of these leaves. -->
         <div class="dl__row">
-          <a class="btn" href="./CopyEye-arm64.apk" download>
-            Download · 13 MB
+          <a class="btn" href="/CopyEye.apk" download="CopyEye.apk">
+            Download · 17 MB
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
               <path d="M12 4v13m0 0 5-5m-5 5-5-5M4 20h16"/>
             </svg>
           </a>
-          <a class="btn btn--ghost" href="https://github.com/Obitouchiha002/CopyEye">Read the source</a>
+          <a class="btn btn--ghost" href="/CopyEye-universal.apk" download="CopyEye-universal.apk">Older phone · 45 MB</a>
         </div>
         <p class="dl__note">
-          arm64 build · Android 10+ · signed<br>
-          Older or unusual phone? Grab the universal build from the repository releases.
+          arm64 build · Android 10 and up · signed<br>
+          The 17 MB file fits every 64-bit phone, which is nearly all of them. Take the
+          45 MB one only if that install is refused — it carries all four chip types.
         </p>
       </div>
     </div>
@@ -1725,7 +1736,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
             <strong>Full developer profile</strong>
             <em>Apps, stack, background and contact</em>
           </div>
-          <span>copyeye.lzworth.in/developer</span>
+          <span>copyeye.vercel.app/developer</span>
         </a>
         <a class="maker__link" href="https://vanshkashyap.lzworth.in/" rel="me author">
           <div>
@@ -1795,7 +1806,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     <a href="./developer">Built by Vansh Kashyap</a>
     <a href="https://vanshkashyap.lzworth.in/">Portfolio</a>
     <a href="https://techbyvansh.lzworth.in/">Tech by Vansh</a>
-    <a href="https://github.com/Obitouchiha002/CopyEye">Source</a>
+    <a href="/CopyEye.apk" download="CopyEye.apk">Download</a>
     <span class="foot__end">On-device · no network</span>
   </div>
 </footer>
