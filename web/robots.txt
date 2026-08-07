@@ -1,0 +1,5 @@
+# CopyEye — everything here is public and meant to be indexed.
+User-agent: *
+Allow: /
+
+Sitemap: https://copyeye.lzworth.in/sitemap.xml
