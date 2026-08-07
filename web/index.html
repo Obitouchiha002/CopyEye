@@ -99,7 +99,7 @@
           "name": "Does CopyEye work without internet?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Completely. Both recognition models ship inside the app, so text recognition runs on your phone with no network call. The app declares no internet permission at all, which means it cannot open a network connection even if it wanted to."
+            "text": "Text recognition is completely on-device. Both models ship inside the app, so scanning runs on your phone and works in aeroplane mode. CopyEye does make one kind of network request \u2014 a check-in on launch that registers the install and asks whether it is suspended, sending only a device id, the name you chose and the app version. No screen, no recognised word and nothing you copy is ever sent anywhere."
           }
         },
         {
@@ -1582,16 +1582,18 @@ $ <strong>grep uses-permission AndroidManifest.xml</strong>
 $ <strong>grep INTERNET AndroidManifest.xml</strong>
   <span class="hit">no matches found</span>
 </div>
-        <!-- Said plainly here because Android will contradict the headline otherwise.
-             The app's own manifest asks for no network permission; the text-recognition
-             libraries it is built on declare INTERNET, and Android merges that in. So the
-             permission is on the list, and nothing in CopyEye ever uses it. Better that
-             you read that from us than find it yourself and assume the rest was a lie. -->
+        <!-- Stated up front because a reader who discovers a network call on their own will
+             assume the rest of this section was a lie. Two claims, kept separate on purpose:
+             *recognition* is entirely on-device and always will be, and *check-in* is a
+             separate, small, describable request. Collapsing them into "no network" would be
+             the easier sentence and the false one. -->
         <p style="margin-top:16px;font-size:14px;color:var(--text-2)">
-          One honest footnote: Android will show <em>INTERNET</em> among CopyEye's
-          permissions. It arrives with Google's on-device text-recognition libraries, not
-          from anything here — no screen, no scan and no copied word is ever sent anywhere.
-          Turn the phone to aeroplane mode and every part of the app still works.
+          One honest footnote. CopyEye asks for <em>INTERNET</em>, and it uses it — once per
+          launch, to register the install and ask whether it has been suspended. That request
+          carries a device id, the name you chose, and the version you are running. It does not
+          carry a screen, a recognised word, or anything you copied; no code path from the
+          scanner reaches the network at all. Recognition itself never leaves the phone, so
+          scanning still works in aeroplane mode.
         </p>
       </div>
     </div>
@@ -1807,7 +1809,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
     <a href="https://vanshkashyap.lzworth.in/">Portfolio</a>
     <a href="https://techbyvansh.lzworth.in/">Tech by Vansh</a>
     <a href="/CopyEye.apk" download="CopyEye.apk">Download</a>
-    <span class="foot__end">On-device · no network</span>
+    <span class="foot__end">Recognition stays on your phone</span>
   </div>
 </footer>
 

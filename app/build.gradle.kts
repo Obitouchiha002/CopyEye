@@ -73,6 +73,8 @@ android {
         // The Shizuku capture path runs a small service inside the shell process, which needs an
         // AIDL boundary.
         aidl = true
+        // RemoteAdmin reports the running version at check-in.
+        buildConfig = true
     }
 
     /**

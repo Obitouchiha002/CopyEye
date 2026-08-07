@@ -52,19 +52,33 @@ Recognition uses ML Kit's **bundled** Latin and Devanagari models
 (`com.google.mlkit:text-recognition`, `com.google.mlkit:text-recognition-devanagari`), which ship
 inside the APK. Not the `play-services-mlkit-*` variants, which download models on demand.
 
-Consequence: OCR works on a device with no network and no Google Play Services, and there is no
-request that could carry screen content anywhere.
+Consequence: OCR works on a device with no network and no Google Play Services. Scanning is
+unaffected by aeroplane mode.
 
 ## "Not uploaded"
 
-**The app declares no `INTERNET` permission.** Not a restricted one, not an unused one — none.
+This section used to make a stronger claim than it can now, and it is worth recording why rather
+than quietly editing it.
 
-```xml
-<!-- AndroidManifest.xml declares no INTERNET permission at all -->
-```
+**It used to say:** the app declares no `INTERNET` permission, so it cannot open a socket, and
+"nothing is uploaded" is enforced by the kernel's network sandbox rather than by the app's code —
+true even for a build with a bug in it.
 
-An app without `INTERNET` cannot open a socket. This is enforced by the kernel's network sandbox, not
-by the app's code, so "nothing is uploaded" holds even for a build with a bug in it.
+**What changed:** CopyEye gained a control backend. Every launch it calls `checkin`, which
+registers the install and reports whether it has been suspended. The permission is now declared and
+used.
+
+**What is sent:** the Android ID, the name typed on first launch, and the app version. That is the
+whole payload; it is one JSON object and `RemoteAdmin.kt` is the only file that builds it.
+
+**What is not, and the reason it is still structural:** no screen, no recognised word, no clipboard
+entry. `RemoteAdmin` holds no reference to `FrameStore`, `ScreenFrame`, the OCR engine or the
+clipboard, and nothing in the capture pipeline holds a reference to `RemoteAdmin`. There is no call
+graph between the two halves, so screen content cannot reach the network even through a bug — which
+is a weaker guarantee than the sandbox gave, and a stronger one than a promise.
+
+If you want the old guarantee back, the check-in is one object and removing it removes the
+permission with it.
 
 ## "Not saved"
 

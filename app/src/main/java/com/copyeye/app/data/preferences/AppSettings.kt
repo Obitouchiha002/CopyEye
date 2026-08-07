@@ -115,6 +115,18 @@ data class AppSettings(
 
     // --- Onboarding / position ---
     val onboardingComplete: Boolean = false,
+
+    /**
+     * The name typed on first launch. Not a login — no password, no email, no account. It exists
+     * so the control panel reads as people rather than a list of Android IDs.
+     */
+    val profileName: String = "",
+
+    /**
+     * Last known premium state, decided by the backend at check-in and cached here so the rest of
+     * the app can ask synchronously and still know the answer offline.
+     */
+    val premium: Boolean = false,
     /** Last resting position as a fraction of the usable overlay bounds, so it survives rotation. */
     val eyePositionXFraction: Float = 1f,
     val eyePositionYFraction: Float = 0.42f,

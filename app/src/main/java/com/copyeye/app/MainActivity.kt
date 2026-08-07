@@ -15,6 +15,15 @@ import androidx.lifecycle.lifecycleScope
 import com.copyeye.app.core.common.ApiLevel
 import com.copyeye.app.data.preferences.ProjectionIdleTimeout
 import com.copyeye.app.overlay.FloatingEyeService
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.copyeye.app.feature.blocked.BlockedScreen
+import com.copyeye.app.feature.onboarding.NameGateScreen
+import com.copyeye.app.remote.RemoteAdmin
 import com.copyeye.app.ui.nav.CopyEyeNavHost
 import com.copyeye.app.ui.nav.Route
 import com.copyeye.app.ui.theme.CopyEyeTheme
@@ -90,16 +99,48 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             CopyEyeTheme {
-                CopyEyeNavHost(
-                    container = container,
-                    startRoute = routeFromIntent(intent),
-                    onRequestOverlayPermission = ::requestOverlayPermission,
-                    onRequestCapturePermission = ::requestCapturePermission,
-                    onRequestNotificationPermission = ::requestNotificationPermission,
-                    onStartService = ::startFloatingEye,
-                    onStopService = ::stopFloatingEye,
-                    onOpenSystemIntent = ::launchSystemIntent,
-                )
+                // Remote status gates everything below it. Check-in runs on launch and again each
+                // time the app returns to the foreground, so a block or a premium grant lands
+                // without the user having to reinstall anything.
+                val settings by container.settingsRepository.settings
+                    .collectAsStateWithLifecycle(initialValue = null)
+                var status by remember { mutableStateOf(RemoteAdmin.Status()) }
+
+                LaunchedEffect(settings?.profileName) {
+                    val name = settings?.profileName ?: return@LaunchedEffect
+                    if (name.isBlank()) return@LaunchedEffect
+                    val fresh = RemoteAdmin.checkin(this@MainActivity, name)
+                    status = fresh
+                    if (fresh.fromServer) {
+                        container.settingsRepository.update { it.copy(premium = fresh.premium) }
+                    }
+                }
+
+                val current = settings
+                when {
+                    // Nothing renders until settings have loaded, or the name gate would flash up
+                    // for a moment on every launch for someone who named themselves months ago.
+                    current == null -> Unit
+
+                    current.profileName.isBlank() -> NameGateScreen { chosen ->
+                        lifecycleScope.launch {
+                            container.settingsRepository.update { it.copy(profileName = chosen) }
+                        }
+                    }
+
+                    status.blocked -> BlockedScreen(status)
+
+                    else -> CopyEyeNavHost(
+                        container = container,
+                        startRoute = routeFromIntent(intent),
+                        onRequestOverlayPermission = ::requestOverlayPermission,
+                        onRequestCapturePermission = ::requestCapturePermission,
+                        onRequestNotificationPermission = ::requestNotificationPermission,
+                        onStartService = ::startFloatingEye,
+                        onStopService = ::stopFloatingEye,
+                        onOpenSystemIntent = ::launchSystemIntent,
+                    )
+                }
             }
         }
 

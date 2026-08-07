@@ -26,9 +26,11 @@ import kotlinx.coroutines.launch
 /**
  * What CopyEye can see, said plainly, next to the switches that change it.
  *
- * The claims here are ones the code actually keeps, and each one is checkable: no network
- * permission is declared at all, so "nothing is uploaded" is enforced by the manifest rather than
- * by good intentions.
+ * The claims here are ones the code actually keeps. The strongest one used to be structural — no
+ * network permission existed, so "nothing is uploaded" was enforced by the sandbox rather than by
+ * good intentions. Check-in changed that, so the wording changed with it. What is still
+ * structural is narrower and worth stating exactly: the capture and OCR pipeline has no reference
+ * to anything that can reach the network, so screen content cannot travel even by accident.
  */
 @Composable
 fun PrivacyScreen(
@@ -60,7 +62,9 @@ fun PrivacyScreen(
 
         SettingsSection(title = "What the app cannot do") {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Fact("No internet permission is declared, so nothing can be sent anywhere.")
+                Fact("Screens and recognised text are never sent anywhere. The only thing " +
+                    "that leaves is a check-in on launch: a device id, the name you chose, " +
+                    "and the app version.")
                 Fact("No camera permission. No microphone permission. No location permission.")
                 Fact("Screen content is never written to storage or to logs.")
                 Fact("Between scans the capture pipeline has no surface attached, so no frames " +

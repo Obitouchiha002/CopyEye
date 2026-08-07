@@ -3,10 +3,21 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      There is deliberately no INTERNET permission. CopyEye reads screens; giving it a network
-      channel at all would make "nothing is uploaded" a promise rather than a fact.
-      There is also no CAMERA, RECORD_AUDIO or location permission, and none is needed.
+      CopyEye makes exactly one kind of network request: a check-in that registers this install
+      with the control backend and asks whether it is suspended. It sends the Android ID, the name
+      typed on first launch, and the app version.
+
+      It never sends a captured screen, a recognised word, or anything OCR produced. Those are
+      read, held in memory, and dropped — no code path from the capture pipeline reaches the
+      network, which is a stronger guarantee than a promise not to use one.
+
+      This permission used to be absent, and this comment used to say so. It was arriving via ML
+      Kit's libraries regardless, so it has always been on the permission list; what changed is
+      that we now genuinely use it.
+
+      There is still no CAMERA, RECORD_AUDIO or location permission, and none is needed.
     -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Draws the floating eye above other apps. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />

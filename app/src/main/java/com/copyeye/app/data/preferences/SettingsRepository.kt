@@ -86,6 +86,8 @@ class SettingsRepository(context: Context) {
 
         val lowPerf = booleanPreferencesKey("low_performance_mode")
         val onboarding = booleanPreferencesKey("onboarding_complete")
+        val profileName = stringPreferencesKey("profile_name")
+        val premium = booleanPreferencesKey("premium")
         val posX = floatPreferencesKey("eye_pos_x_fraction")
         val posY = floatPreferencesKey("eye_pos_y_fraction")
     }
@@ -128,6 +130,8 @@ class SettingsRepository(context: Context) {
 
             lowPerformanceMode = prefs[Keys.lowPerf] ?: defaults.lowPerformanceMode,
             onboardingComplete = prefs[Keys.onboarding] ?: defaults.onboardingComplete,
+            profileName = prefs[Keys.profileName] ?: defaults.profileName,
+            premium = prefs[Keys.premium] ?: defaults.premium,
             eyePositionXFraction = prefs[Keys.posX]?.coerceIn(0f, 1f) ?: defaults.eyePositionXFraction,
             eyePositionYFraction = prefs[Keys.posY]?.coerceIn(0f, 1f) ?: defaults.eyePositionYFraction,
         )
@@ -165,6 +169,8 @@ class SettingsRepository(context: Context) {
 
         prefs[Keys.lowPerf] = s.lowPerformanceMode
         prefs[Keys.onboarding] = s.onboardingComplete
+        prefs[Keys.profileName] = s.profileName
+        prefs[Keys.premium] = s.premium
         prefs[Keys.posX] = s.eyePositionXFraction
         prefs[Keys.posY] = s.eyePositionYFraction
     }
