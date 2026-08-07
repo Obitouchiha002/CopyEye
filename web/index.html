@@ -213,8 +213,8 @@ body {
   background: var(--ink);
   color: var(--text);
   font-family: var(--f-display);
-  font-size: 18.5px;
-  line-height: 1.62;
+  font-size: 20px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -276,7 +276,7 @@ h3 {
   font-weight: 650;
 }
 p { margin: 0; max-width: min(var(--measure), 100%); }
-.lede { font-size: clamp(18.5px, 2.1vw, 23px); color: var(--text-2); line-height: 1.55; }
+.lede { font-size: clamp(20px, 2.3vw, 26px); color: var(--text-2); line-height: 1.55; }
 
 /* The page's signature device, borrowed straight from the product:
    words sit dimmed until they are "lit". */
@@ -396,7 +396,7 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
 .stage { display: flex; justify-content: center; }
 .phone {
   position: relative;
-  width: min(310px, 82vw);
+  width: min(330px, 84vw);
   aspect-ratio: 9 / 19.5;
   border-radius: 34px;
   border: 1px solid var(--line);
@@ -427,18 +427,16 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(80% 55% at 24% 16%, #FFC46B 0%, transparent 58%),
-    radial-gradient(90% 60% at 82% 26%, #FF7A6B 0%, transparent 60%),
-    radial-gradient(120% 70% at 50% 104%, #1B2A5E 0%, transparent 70%),
-    linear-gradient(168deg, #F0885E 0%, #A25BA8 46%, #2A2F6B 100%);
+    radial-gradient(85% 50% at 18% 6%, #8B7BFF 0%, transparent 62%),
+    radial-gradient(80% 46% at 92% 30%, #F0885E 0%, transparent 64%),
+    radial-gradient(110% 60% at 50% 100%, #10143A 0%, transparent 72%),
+    linear-gradient(165deg, #4A3BAE 0%, #2B2560 52%, #12142E 100%);
 }
-/* A horizon line, so the frame reads as a photograph rather than a swatch. */
 .screen__grad::after {
   content: "";
   position: absolute;
-  left: 0; right: 0; top: 54%;
-  height: 46%;
-  background: linear-gradient(180deg, rgba(20,26,60,.15), rgba(9,12,32,.82));
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8,10,26,.10) 0%, rgba(8,10,26,.55) 62%, rgba(8,10,26,.86) 100%);
 }
 /* The dim that a scan drops over everything. */
 .screen__dim {
@@ -455,21 +453,57 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   position: relative;
   z-index: 3;
   height: 100%;
-  padding: 26px 20px;
+  padding: 22px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  justify-content: flex-end;
 }
-.handle {
-  position: absolute;
-  top: 26px;
-  left: 20px;
+.pf { display: flex; flex-direction: column; gap: 7px; height: 100%; }
+.pf__top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pf__avatar {
+  width: 30px; height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #A79BFF, #5B49D6);
+  font-size: 11.5px;
+  font-weight: 780;
+  letter-spacing: .02em;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
+.pf__url {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  letter-spacing: .02em;
+  color: rgba(255,255,255,.72);
+  background: rgba(0,0,0,.32);
+  border-radius: 100px;
+  padding: 5px 11px;
+}
+.pf__name  { font-size: 23px; font-weight: 780; letter-spacing: -.03em; line-height: 1.05; }
+.pf__role  { font-size: 13px; font-weight: 560; opacity: .92; }
+.pf__quote { font-size: 14.5px; font-weight: 700; line-height: 1.3; margin-top: 6px; }
+.pf__label {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  margin-top: 9px;
+}
+.pf__item { font-size: 12.5px; font-weight: 540; line-height: 1.32; }
+.pf__cta {
+  margin-top: auto;
+  align-self: flex-start;
   font-size: 13px;
-  font-weight: 640;
-  color: #FFF0D8;
-  text-shadow: 0 1px 6px rgba(0,0,0,.8);
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 100px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.26);
 }
+
 /* A recognised line: dimmed with everything else, then cut back out of
    the dim so the words themselves are the only thing still lit. */
 .line {
@@ -483,9 +517,6 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   border-radius: 5px;
   transition: box-shadow .3s ease, background .3s ease;
 }
-.line--hi { font-size: 18px; font-weight: 750; line-height: 1.28; letter-spacing: -.01em; }
-.line--en { font-size: 14px; line-height: 1.4; font-weight: 520; }
-.line--tag { font-size: 12.5px; color: #E9DFFF; }
 /* "Lit" = a hole punched in the dim, matching what the app really does. */
 .is-ready .line { box-shadow: 0 0 0 400px rgba(0,0,0,0) inset; }
 /* The dim is punched out behind each recognised line, so the words are the
@@ -591,16 +622,16 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
 .litany {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 0;
-  max-width: min(20ch, 100%);
-  font-size: clamp(26px, 5vw, 52px);
-  line-height: 1.12;
-  letter-spacing: -.035em;
-  font-weight: 680;
+  gap: 6px 0;
+  max-width: min(30ch, 100%);
+  font-size: clamp(32px, 6.4vw, 76px);
+  line-height: 1.02;
+  letter-spacing: -.042em;
+  font-weight: 700;
 }
 .litany span { color: var(--text-2); transition: color .3s ease; }
 .litany span::after { content: "."; color: var(--iris); }
-.litany span + span { margin-left: .38em; }
+.litany span + span { margin-left: .32em; }
 .litany span.on { color: var(--text); }
 
 /* ── The scan, timed ───────────────────────────────────────── */
@@ -629,8 +660,8 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.stage-cell strong { font-size: 18.5px; font-weight: 640; letter-spacing: -.015em; }
-.stage-cell p { font-size: 16px; color: var(--text-2); line-height: 1.5; }
+.stage-cell strong { font-size: 20px; font-weight: 640; letter-spacing: -.015em; }
+.stage-cell p { font-size: 17px; color: var(--text-2); line-height: 1.5; }
 
 /* ── Proof block ───────────────────────────────────────────── */
 .split {
@@ -643,7 +674,7 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
 
 .proof {
   font-family: var(--f-mono);
-  font-size: 13.5px;
+  font-size: 14.5px;
   line-height: 1.85;
   background: var(--ink-2);
   border: 1px solid var(--line);
@@ -662,7 +693,7 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   display: grid;
   grid-template-columns: 18px 1fr;
   gap: 13px;
-  font-size: 17px;
+  font-size: 18.5px;
   color: var(--text-2);
   line-height: 1.5;
 }
@@ -698,7 +729,7 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
 }
 .script p {
   margin-top: 14px;
-  font-size: clamp(19px, 2.4vw, 25px);
+  font-size: clamp(21px, 2.6vw, 28px);
   line-height: 1.4;
   letter-spacing: -.02em;
   color: var(--text);
@@ -733,9 +764,38 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
 .spec small { display: block; margin-top: 8px; font-size: 13px; color: var(--text-2); font-weight: 400; letter-spacing: 0; }
 
 /* ── Limits ────────────────────────────────────────────────── */
-.limits { list-style: none; padding: 0; margin: 30px 0 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.limits li { background: var(--ink); padding: 22px 24px; font-size: 17px; color: var(--text-2); line-height: 1.55; }
-.limits b { color: var(--text); font-weight: 620; }
+/* Numbered because it is a fixed, countable set the reader is meant to hold in
+   their head — "four things", named up front — not because numbers decorate. */
+.limits { list-style: none; counter-reset: lim; padding: 0; margin: 42px 0 0; display: grid; gap: 0; }
+.limits li {
+  counter-increment: lim;
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 6px 20px;
+  padding: 30px 0;
+  border-top: 1px solid var(--line);
+}
+.limits li:last-child { border-bottom: 1px solid var(--line); }
+.limits li::before {
+  content: counter(lim, decimal-leading-zero);
+  grid-row: 1 / span 2;
+  font-family: var(--f-mono);
+  font-size: 14px;
+  color: var(--iris);
+  padding-top: .35em;
+  font-variant-numeric: tabular-nums;
+}
+.limits b {
+  color: var(--text);
+  font-weight: 660;
+  font-size: clamp(20px, 2.3vw, 26px);
+  letter-spacing: -.025em;
+  line-height: 1.2;
+}
+.limits p { color: var(--text-2); font-size: 18px; line-height: 1.55; }
+@media (max-width: 640px) {
+  .limits li { grid-template-columns: 42px 1fr; gap: 6px 14px; padding: 24px 0; }
+}
 
 /* ── FAQ ───────────────────────────────────────────────────── */
 .faq { margin-top: 34px; border-top: 1px solid var(--line); }
@@ -760,7 +820,7 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   font-size: 19px;
 }
 .faq details[open] summary::after { content: "−"; }
-.faq p { padding: 0 0 24px; color: var(--text-2); font-size: 17px; }
+.faq p { padding: 0 0 26px; color: var(--text-2); font-size: 18.5px; }
 
 /* ── Download ──────────────────────────────────────────────── */
 .dl {
@@ -790,9 +850,9 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
   transition: border-color .18s ease, transform .18s ease;
 }
 .maker__link:hover { border-color: var(--iris); transform: translateX(3px); }
-.maker__link strong { font-size: 16px; font-weight: 640; letter-spacing: -.02em; }
+.maker__link strong { font-size: 18px; font-weight: 640; letter-spacing: -.02em; }
 .maker__link span { font-family: var(--f-mono); font-size: 12.5px; color: var(--text-2); margin-left: auto; }
-.maker__link em { display: block; font-style: normal; font-size: 14px; color: var(--text-2); margin-top: 3px; }
+.maker__link em { display: block; font-style: normal; font-size: 16px; color: var(--text-2); margin-top: 3px; }
 
 /* ── Footer ────────────────────────────────────────────────── */
 footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
@@ -813,8 +873,9 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
 .eyewrap {
   position: relative;
   aspect-ratio: 1;
-  width: min(560px, 96%);
+  width: min(600px, 100%);
   margin-inline: auto;
+  padding-bottom: 34px;
 }
 #eye {
   display: block;
@@ -828,7 +889,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   content: "";
   position: absolute;
   left: 12%; right: 12%;
-  bottom: 4%;
+  bottom: 16%;
   height: 40px;
   border-radius: 50%;
   background: radial-gradient(50% 50% at 50% 50%, color-mix(in srgb, var(--iris) 22%, transparent), transparent 72%);
@@ -847,7 +908,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
 .eyewrap__hint {
   position: absolute;
   left: 50%;
-  bottom: -6px;
+  bottom: 0;
   transform: translateX(-50%);
   font-family: var(--f-mono);
   font-size: 11.5px;
@@ -1096,7 +1157,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   <!-- ── Litany ───────────────────────────────────────────── -->
   <section class="band">
     <div class="wrap rise">
-      <p class="eyebrow">Where it works</p>
+      <p class="eyebrow">Where does it work?</p>
       <p class="litany" id="litany">
         <span>Videos</span><span>Reels</span><span>Shorts</span><span>Screenshots</span><span>Photos</span><span>Games</span><span>PDFs</span><span>Slides</span><span>Anything that blocks copy</span>
       </p>
@@ -1109,24 +1170,44 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   <!-- ── How it works ─────────────────────────────────────── -->
   <section class="band" id="how">
     <div class="wrap rise">
-      <p class="eyebrow">One tap, start to finish</p>
+      <p class="eyebrow">What actually happens?</p>
       <h2>A scan is four things,<br>and you only do the first.</h2>
       <div class="split" style="margin-top:44px;align-items:center">
         <div class="tilt" id="tilt">
         <div class="phone" id="demo" role="img"
-             aria-label="A phone playing a video with a Hindi caption. A floating eye is tapped, a scan sweeps the screen, the caption lights up, and a Copied confirmation appears.">
+             aria-label="A phone showing Vansh Kashyap's portfolio. A floating eye is tapped, a scan sweeps the screen, every line of text lights up, and a Copied confirmation appears.">
           <div class="screen">
             <div class="screen__grad"></div>
             <div class="screen__noise" style="filter:url(#grain)"></div>
             <div class="screen__dim"></div>
             <div class="sweeper"></div>
             <div class="screen__content">
-              <div class="handle">@techbyvansh</div>
-              <div class="line line--tag">2:14 / 3:40</div>
-              <div class="line line--hi" id="lineHi">मैंने यह टेक्स्ट वीडियो से कॉपी किया</div>
-              <div class="line line--en">Vansh Kashyap · LZ Worth</div>
-              <div class="line line--en" id="lineSite">vanshkashyap.lzworth.in</div>
-              <div class="line line--en">+91 88006 28376</div>
+              <div class="pf">
+                <div class="pf__top">
+                  <span class="pf__avatar">VK</span>
+                  <span class="pf__url">vanshkashyap.lzworth.in</span>
+                </div>
+
+                <div class="line pf__name">Vansh Kashyap</div>
+                <div class="line pf__role">Android &amp; web developer · New Delhi</div>
+                <div class="line pf__quote" id="lineHi">मैंने यह टेक्स्ट वीडियो से कॉपी किया</div>
+
+                <div class="pf__label">Building</div>
+                <div class="line pf__item">CopyEye — copy text off any screen</div>
+                <div class="line pf__item">StreamGarden — 4K downloader</div>
+                <div class="line pf__item">JanamJyot — Vedic astrology</div>
+                <div class="line pf__item">Hisaabi — voice expense tracker</div>
+
+                <div class="pf__label">Stack</div>
+                <div class="line pf__item">Kotlin · Compose · React · Next.js</div>
+                <div class="line pf__item">Supabase · n8n · TypeScript</div>
+
+                <div class="pf__label">Reach</div>
+                <div class="line pf__item">+91 88006 28376</div>
+                <div class="line pf__item">techbyvansh.lzworth.in</div>
+
+                <div class="pf__cta line">Hire me →</div>
+              </div>
             </div>
             <div class="copied">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" aria-hidden="true">
@@ -1138,11 +1219,14 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
           </div>
           </div>
         </div>
-        <p class="lede">
-          What you are watching on the left is the real sequence, at the real speed. The frame
-          freezes exactly where your screen was — same size, same position — so your eye never has
-          to go looking for the words it was already reading.
-        </p>
+        <div>
+          <p class="eyebrow" style="margin-bottom:14px">Watch it scan</p>
+          <p class="lede">
+            What you are watching on the left is the real sequence, at the real speed. The frame
+            freezes exactly where your screen was — same size, same position — so your eye never
+            has to go looking for the words it was already reading.
+          </p>
+        </div>
       </div>
       <div class="stages">
         <div class="stage-cell">
@@ -1173,6 +1257,43 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
     </div>
   </section>
 
+  <!-- ── Limits ───────────────────────────────────────────── -->
+  <section class="band">
+    <div class="wrap rise">
+      <p class="eyebrow">So what is the catch?</p>
+      <h2>Four things it<br>cannot do.</h2>
+      <p class="lede" style="margin-top:24px">
+        Every app's landing page lists what it can do. This is the other half, up here rather than
+        buried, so nothing about it is a surprise after you install it.
+      </p>
+      <ol class="limits">
+        <li>
+          <b>It cannot read a protected screen.</b>
+          <p>Banking apps and DRM video mark their windows secure, and Android hands CopyEye a blank
+             image instead of their contents. It says so and stops. There is no setting that gets
+             around this, and there will not be one.</p>
+        </li>
+        <li>
+          <b>It cannot skip Android's permission dialog.</b>
+          <p>That prompt belongs to the system, not to us, and it cannot be remembered forever. You
+             choose which way to trade: see it once per session and keep a recording icon, or see it
+             per scan and keep your status bar clean.</p>
+        </li>
+        <li>
+          <b>It cannot switch on your OEM's own setting.</b>
+          <p>Xiaomi, Oppo, Vivo and Realme block apps from opening over other apps until you allow
+             it in their security app. CopyEye detects when this has happened and points at the
+             exact screen — but you have to flip it.</p>
+        </li>
+        <li>
+          <b>It cannot read what it cannot see.</b>
+          <p>It works on pixels, not meaning. Tiny, blurred or heavily stylised text comes back wrong
+             sometimes. Zooming in before you scan fixes most of it.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
 </div><!-- /p-how -->
 
 <div class="pane" id="p-privacy">
@@ -1180,7 +1301,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
   <section class="band" id="privacy">
     <div class="wrap split rise">
       <div>
-        <p class="eyebrow">The part that matters</p>
+        <p class="eyebrow">Where does my screen go?</p>
         <h2>It has no way<br>to send anything<br><span class="lit">anywhere</span>.</h2>
         <p class="lede" style="margin-top:24px">
           Most apps promise not to upload your data. CopyEye cannot. It declares no internet
@@ -1220,7 +1341,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
   <!-- ── Scripts ──────────────────────────────────────────── -->
   <section class="band">
     <div class="wrap rise">
-      <p class="eyebrow">Two scripts, one tap</p>
+      <p class="eyebrow">Does it read Hindi?</p>
       <h2>Built for the way<br>Indian screens actually read.</h2>
       <p class="lede" style="margin-top:22px">
         A Hindi caption over an English interface is not an edge case here — it is the normal case.
@@ -1246,7 +1367,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
   <!-- ── Specs ────────────────────────────────────────────── -->
   <section class="band" id="specs">
     <div class="wrap rise">
-      <p class="eyebrow">The numbers</p>
+      <p class="eyebrow">What does it cost me?</p>
       <dl class="specs">
         <div class="spec">
           <dt>Download</dt>
@@ -1265,24 +1386,6 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
           <dd>Free<small>no ads, no account</small></dd>
         </div>
       </dl>
-    </div>
-  </section>
-
-  <!-- ── Limits ───────────────────────────────────────────── -->
-  <section class="band">
-    <div class="wrap rise">
-      <p class="eyebrow">What it will not do</p>
-      <h2>The honest list.</h2>
-      <p class="lede" style="margin-top:22px">
-        Every app's landing page tells you what it can do. This is the other half, so nothing is a
-        surprise after you install it.
-      </p>
-      <ul class="limits">
-        <li><b>Protected screens stay protected.</b> Banking apps and DRM video mark their windows as secure and Android hands CopyEye a blank image. It says so and moves on — there is no setting that gets around it.</li>
-        <li><b>Android asks permission to read the screen.</b> That dialog is the system's, not ours, and it cannot be remembered forever. You can choose between seeing it once per session or once per scan.</li>
-        <li><b>Xiaomi, Oppo, Vivo and Realme need one extra switch.</b> They block apps from opening over other apps unless you allow it in their own settings. CopyEye detects it and tells you exactly where to look.</li>
-        <li><b>It reads pixels, not minds.</b> Tiny, blurred or heavily stylised text will come back wrong sometimes. Zooming in before you scan fixes most of it.</li>
-      </ul>
     </div>
   </section>
 
@@ -1356,7 +1459,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
   <section class="band" id="maker" itemscope itemtype="https://schema.org/Person">
     <div class="wrap maker rise">
       <div>
-        <p class="eyebrow">Made by</p>
+        <p class="eyebrow">Who built this?</p>
         <h2 itemprop="name">Vansh Kashyap</h2>
         <p class="lede" style="margin-top:22px">
           Independent Android and web developer from India. I build things I want to use — CopyEye,
@@ -1559,7 +1662,9 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
           if (inEye <= 0.001) { gl_FragColor = vec4(0.0); return; }
 
           vec3 ro = vec3(0.0, 0.0, 3.05);
-          vec3 rd = normalize(vec3(uv * 2.15, -3.05));
+          // A wider fan of rays pulls the camera back. 2.15 cropped the ball at
+          // the top of its own box; 3.05 seats the whole eye with air around it.
+          vec3 rd = normalize(vec3(uv * 3.05, -3.05));
 
           float bb = dot(ro, rd);
           float cc = dot(ro, ro) - 1.0;
