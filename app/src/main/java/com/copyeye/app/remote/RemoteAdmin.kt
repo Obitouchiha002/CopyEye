@@ -83,17 +83,20 @@ object RemoteAdmin {
      * because a database is down would be worse than one with no admin control at all.
      */
     suspend fun checkin(context: Context, displayName: String?): Status = withContext(Dispatchers.IO) {
-        val body = JSONObject().apply {
+        val base = JSONObject().apply {
             put("p_id", installId(context))
             put("p_name", displayName?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL)
             put("p_version", BuildConfig.VERSION_NAME)
             put("p_platform", PLATFORM)
-            // The live function's signature includes p_email. Omitting it makes PostgREST fail to
-            // resolve the overload entirely, so it is sent as an explicit null.
-            put("p_email", JSONObject.NULL)
         }
 
-        val raw = post("checkin", body) ?: return@withContext Status()
+        // `checkin` exists in two shapes on this backend and which one is live has already
+        // changed once. PostgREST resolves an overload by exact argument names, so sending the
+        // wrong set is not a soft failure — it is PGRST202, "function not found", and check-in
+        // silently stops working for every install. Try the five-argument form, fall back to the
+        // four. Neither is guessed: both have been observed answering.
+        val withEmail = JSONObject(base.toString()).apply { put("p_email", JSONObject.NULL) }
+        val raw = post("checkin", withEmail) ?: post("checkin", base) ?: return@withContext Status()
         val row = when {
             raw.startsWith("[") -> JSONArray(raw).optJSONObject(0)
             raw.startsWith("{") -> JSONObject(raw)
