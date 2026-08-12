@@ -276,10 +276,20 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             try {
+                // Try to translate outright. The translator reaches for the server model first,
+                // which needs no download at all — so checking for the offline model before
+                // trying would make everyone wait for 30 MB they may never need.
+                val first = translator.translate(source, from, to)
+                if (first.isSuccess) {
+                    val out = first.getOrThrow()
+                    withReady { current, _ ->
+                        _uiState.value = current.copy(editing = true, editedText = out)
+                    }
+                    return@launch
+                }
+
+                // Only now is the offline model the only option left.
                 if (!translator.isReady(from, to)) {
-                    // First use in this direction needs the model. Say what is happening — this
-                    // is the one part of the app that touches the network, and a silent 30 MB
-                    // download on mobile data is not something to spring on anyone.
                     _note.value = getApplication<Application>().getString(R.string.translate_downloading)
                     val downloaded = translator.download(from, to, wifiOnly = false)
                     if (downloaded.isFailure) {

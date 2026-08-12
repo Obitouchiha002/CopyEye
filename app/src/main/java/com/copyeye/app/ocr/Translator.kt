@@ -5,6 +5,9 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -35,7 +38,18 @@ sealed interface TranslationState {
     data class Failed(val message: String) : TranslationState
 }
 
+/**
+ * Translation with two engines and a clear order of preference.
+ *
+ * ML Kit is on the device, free and offline, and writes textbook Hindi. The server route uses a
+ * model large enough to sound like a person, but needs a connection and costs the owner money —
+ * and its key can never be in this app, which is why it is behind an endpoint rather than called
+ * directly. The good one is tried first and the offline one always catches.
+ */
 class TextTranslator {
+
+    /** Where the server-side translator lives. Nothing secret is in this URL. */
+    private val endpoint = "https://copyeye.lzworth.in/api/translate"
 
     private val cache = mutableMapOf<String, Translator>()
 
@@ -81,8 +95,41 @@ class TextTranslator {
             }
         }
 
+    /**
+     * The better translation, if it is reachable.
+     *
+     * Returns null rather than failing for every reason a phone has: no signal, a flat battery
+     * saver, the endpoint unconfigured. The caller falls through to ML Kit and the user never
+     * learns any of this happened.
+     */
+    private suspend fun translateRemote(text: String, to: String): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val body = JSONObject().apply {
+                    put("text", text)
+                    put("to", if (to == TranslateLanguage.ENGLISH) "en" else "hi")
+                }
+                val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = REMOTE_TIMEOUT_MS
+                    readTimeout = REMOTE_TIMEOUT_MS
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                }
+                conn.outputStream.use { it.write(body.toString().toByteArray()) }
+                val ok = conn.responseCode in 200..299
+                val payload = (if (ok) conn.inputStream else conn.errorStream)
+                    ?.bufferedReader()?.use { it.readText() }
+                conn.disconnect()
+                if (!ok) return@runCatching null
+                JSONObject(payload.orEmpty()).optString("text").takeIf { it.isNotBlank() }
+            }.getOrNull()
+        }
+
     suspend fun translate(text: String, from: String, to: String): Result<String> =
         withContext(Dispatchers.IO) {
+            // The good one first. It is the only reason someone would notice this feature at all.
+            translateRemote(text, to)?.let { return@withContext Result.success(it) }
             runCatching {
                 await<String> { c ->
                     translator(from, to).translate(text)
@@ -133,6 +180,8 @@ class TextTranslator {
     ): T? = suspendCoroutine { c -> block(c) }
 
     private companion object {
+        const val REMOTE_TIMEOUT_MS = 12_000
+
         val DEVANAGARI = 'ऀ'..'ॿ'
 
         /**
