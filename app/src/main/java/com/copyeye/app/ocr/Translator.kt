@@ -88,9 +88,29 @@ class TextTranslator {
                     translator(from, to).translate(text)
                         .addOnSuccessListener(c::resume)
                         .addOnFailureListener(c::resumeWithException)
-                }.orEmpty()
+                }.orEmpty().let(::colloquialise)
             }
         }
+
+    /**
+     * Softens ML Kit's Hindi into the Hindi people actually speak.
+     *
+     * The model is trained on formal written text, so it reaches for the Sanskritised register:
+     * *अत्यंत* where anyone would say *बहुत*, *परन्तु* for *लेकिन*, *एवं* for *और*. Read aloud it
+     * sounds like a school textbook, which is not what someone wants back from a caption on a
+     * Reel.
+     *
+     * This cannot fix the translation — the model is the model, and a wrong sentence stays wrong.
+     * It only swaps the handful of words that make a correct sentence sound stiff. Word-boundary
+     * matched, so *एवं* inside a longer word is left alone.
+     */
+    private fun colloquialise(text: String): String {
+        var out = text
+        EVERYDAY.forEach { (formal, plain) ->
+            out = out.replace(Regex("(?<![\\p{L}])" + Regex.escape(formal) + "(?![\\p{L}])"), plain)
+        }
+        return out
+    }
 
     /** Frees the native translators. The scan screen owns these for one scan at a time. */
     fun close() {
@@ -114,5 +134,58 @@ class TextTranslator {
 
     private companion object {
         val DEVANAGARI = 'ऀ'..'ॿ'
+
+        /**
+         * Formal → everyday. Only words where the plain form is unambiguously the same meaning —
+         * nothing here changes what a sentence says, just how stilted it sounds.
+         */
+        val EVERYDAY = listOf(
+            "अत्यंत" to "बहुत",
+            "अत्यन्त" to "बहुत",
+            "अतीव" to "बहुत",
+            "परन्तु" to "लेकिन",
+            "परंतु" to "लेकिन",
+            "किन्तु" to "लेकिन",
+            "किंतु" to "लेकिन",
+            "एवं" to "और",
+            "तथा" to "और",
+            "अथवा" to "या",
+            "अतः" to "तो",
+            "इसलिये" to "इसलिए",
+            "क्योंकि" to "क्योंकि",
+            "प्रातः" to "सुबह",
+            "सायं" to "शाम",
+            "धन्यवाद" to "शुक्रिया",
+            "कृपया" to "प्लीज़",
+            "समीप" to "पास",
+            "शीघ्र" to "जल्दी",
+            "अधिक" to "ज़्यादा",
+            "न्यून" to "कम",
+            "सम्पूर्ण" to "पूरा",
+            "संपूर्ण" to "पूरा",
+            "प्रारंभ" to "शुरू",
+            "प्रारम्भ" to "शुरू",
+            "समाप्त" to "खत्म",
+            "उपरांत" to "बाद",
+            "उपरान्त" to "बाद",
+            "व्यय" to "खर्च",
+            "क्रय" to "खरीद",
+            "विक्रय" to "बिक्री",
+            "आवश्यक" to "ज़रूरी",
+            "आवश्यकता" to "ज़रूरत",
+            "प्रयोग" to "इस्तेमाल",
+            "उपयोग" to "इस्तेमाल",
+            "सहायता" to "मदद",
+            "प्रश्न" to "सवाल",
+            "उत्तर" to "जवाब",
+            "समय" to "टाइम",
+            "मूल्य" to "कीमत",
+            "प्रतीक्षा" to "इंतज़ार",
+            "सूचना" to "जानकारी",
+            "स्थान" to "जगह",
+            "मार्ग" to "रास्ता",
+            "निःशुल्क" to "फ्री",
+            "पुनः" to "फिर से",
+        )
     }
 }

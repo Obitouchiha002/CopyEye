@@ -290,6 +290,8 @@ class ScanActivity : ComponentActivity() {
                         },
                         onShare = onShare,
                         onTranslate = viewModel::translateSelection,
+                        selectionPreview = viewModel.selectedText().trim().replace('\n', ' '),
+                        selectionLines = state.selection.lineCount,
                         translateBusy = translateBusy,
                         onSmartAction = onOpenSmartAction,
                         onClose = onClose,

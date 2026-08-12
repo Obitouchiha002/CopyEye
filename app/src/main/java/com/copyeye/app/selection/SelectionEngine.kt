@@ -24,6 +24,9 @@ data class Selection(
 ) {
     val isEmpty: Boolean get() = words.isEmpty()
     val size: Int get() = words.size
+
+    /** How many distinct lines the selection touches — what the toolbar reports back. */
+    val lineCount: Int get() = words.map { it.lineId }.distinct().size
 }
 
 /**

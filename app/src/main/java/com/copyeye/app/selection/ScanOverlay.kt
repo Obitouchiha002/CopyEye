@@ -233,35 +233,29 @@ fun FrozenFrameLayer(
             .orEmpty()
         val selected = highlights.map { transform.bitmapToScreen(it.expanded(TEXT_PADDING_PX)) }
 
-        // ---- The dim, with the text cut out of it ------------------------------------------
+        // ---- Highlighting ------------------------------------------------------------------
         //
-        // The obvious way to show "this text is selectable" is to paint something over it. That is
-        // also what makes it look wrong: any colour laid on top of a glyph sits between the reader
-        // and the word, and the text reads as being behind glass.
+        // This started out clever and looked terrible, so it is worth recording why.
         //
-        // So nothing is painted over the text at all. The whole frame is dimmed, and every
-        // recognised line is *subtracted* from the dim — the text is not covered, it is the only
-        // thing still lit. Selection then reads as more light, not more paint.
-        val textShape = Path().apply {
-            visibleLines.forEach { rect -> addRoundRect(rect.toRoundRect(TEXT_CORNER_PX)) }
-        }
-        val dimmed = Path().apply {
-            op(
-                Path().apply { addRect(Rect(0f, 0f, size.width, size.height)) },
-                textShape,
-                PathOperation.Difference,
-            )
-        }
-        drawPath(dimmed, Color.Black.copy(alpha = dimAmount.coerceIn(0f, 0.85f)))
+        // The first version dimmed the whole frame and *subtracted* every recognised line from
+        // the dim, on the theory that painting nothing over a glyph keeps it readable. On a real
+        // screenshot that reads as a page full of white boxes — the unselected text all becomes
+        // panels, and the picture underneath disappears behind a grid. Elegant in description,
+        // ugly in a photograph of an Instagram post.
+        //
+        // What it does now is what every other app does when you select text: leave the picture
+        // completely alone, and put a translucent wash of the accent behind the words you chose.
+        // People already know what that means, which is the entire argument for it.
 
-        // A whisper of a marker under each line: enough to say "this is a thing you can tap",
-        // far too faint to compete with the words themselves.
+        // Nothing is drawn for text that is merely *available*. A marker on every recognised line
+        // is the box soup again; the hint pill says "tap text to copy", and one tap teaches the
+        // rest. The optional underline stays for anyone who wants the old cue.
         if (highlightStyle == HighlightStyle.Underline) {
             visibleLines.forEach { rect ->
                 drawLine(
-                    color = ScanCyan.copy(alpha = 0.55f),
-                    start = Offset(rect.left + TEXT_CORNER_PX, rect.bottom),
-                    end = Offset(rect.right - TEXT_CORNER_PX, rect.bottom),
+                    color = ScanCyan.copy(alpha = 0.40f),
+                    start = Offset(rect.left + TEXT_CORNER_PX, rect.bottom + 1f),
+                    end = Offset(rect.right - TEXT_CORNER_PX, rect.bottom + 1f),
                     strokeWidth = 2f,
                     cap = StrokeCap.Round,
                 )
@@ -270,28 +264,21 @@ fun FrozenFrameLayer(
 
         // ---- Selection ---------------------------------------------------------------------
         //
-        // A soft outer glow and a crisp edge, both *outside* the glyphs. The one thing drawn over
-        // the text is a 6%-alpha wash, which is below the threshold where it starts to grey the
-        // strokes but enough to tie the region together as one selection.
+        // A translucent accent wash, the way a text field or a browser draws it. Strong enough to
+        // be unmistakable at a glance, light enough that the words stay legible through it — the
+        // alpha is the whole design here, and 0.34 is where dark text on a light photo and light
+        // text on a dark one both survive.
         selected.forEach { rect ->
-            val glow = rect.expanded(SELECTION_GLOW_PX)
+            val pad = SELECTION_PAD_PX
+            val padded = rect.expanded(pad)
+            drawRoundRectFill(padded, SelectionWash.copy(alpha = 0.34f))
+            // A hairline edge, so two adjacent lines still read as two lines rather than a blob.
             drawRoundRect(
-                brush = Brush.radialGradient(
-                    colors = listOf(ScanCyan.copy(alpha = 0.30f), Color.Transparent),
-                    center = Offset(glow.centerX, glow.centerY),
-                    radius = maxOf(glow.width, glow.height) * 0.75f,
-                ),
-                topLeft = Offset(glow.left, glow.top),
-                size = Size(glow.width.coerceAtLeast(1f), glow.height.coerceAtLeast(1f)),
-                cornerRadius = CornerRadius(TEXT_CORNER_PX + SELECTION_GLOW_PX),
-            )
-            drawRoundRectFill(rect, ScanCyan.copy(alpha = 0.06f))
-            drawRoundRect(
-                color = ScanCyan,
-                topLeft = Offset(rect.left, rect.top),
-                size = Size(rect.width.coerceAtLeast(1f), rect.height.coerceAtLeast(1f)),
+                color = SelectionWash.copy(alpha = 0.85f),
+                topLeft = Offset(padded.left, padded.top),
+                size = Size(padded.width.coerceAtLeast(1f), padded.height.coerceAtLeast(1f)),
                 cornerRadius = CornerRadius(TEXT_CORNER_PX),
-                style = Stroke(width = SELECTION_STROKE_PX),
+                style = Stroke(width = 1.5f),
             )
         }
 
@@ -311,6 +298,14 @@ fun FrozenFrameLayer(
         }
     }
 }
+
+/**
+ * The selection colour.
+ *
+ * Violet rather than the scan cyan: cyan against the blue-white of a phone screenshot is nearly
+ * invisible, which is how the old highlight managed to be both loud and unclear at once.
+ */
+private val SelectionWash = IrisViolet
 
 private fun TextRect.toRoundRect(radius: Float) = RoundRect(
     left = left,
@@ -488,6 +483,7 @@ private const val TEXT_PADDING_PX = 4f
 private const val TEXT_CORNER_PX = 7f
 private const val CORNER_RADIUS_PX = 7f
 private const val SELECTION_STROKE_PX = 2.2f
+private const val SELECTION_PAD_PX = 3f
 private const val SELECTION_GLOW_PX = 7f
 private const val MIN_REGION_PX = 24f
 

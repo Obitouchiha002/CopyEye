@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.copyeye.app.ocr.SmartAction
 
@@ -64,6 +65,9 @@ fun SelectionToolbar(
     onRescan: () -> Unit,
     onShare: () -> Unit,
     onTranslate: () -> Unit,
+    /** What is selected right now, so the bar can show it instead of leaving you guessing. */
+    selectionPreview: String,
+    selectionLines: Int,
     /** What the translate control is doing right now, so the icon can say so. */
     translateBusy: Boolean = false,
     onSmartAction: (SmartAction) -> Unit,
@@ -101,6 +105,32 @@ fun SelectionToolbar(
                             },
                         )
                     }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // What is actually selected, in words, updating as you tap. Without this the only
+            // feedback is a coloured rectangle somewhere behind the bar — which on a long
+            // paragraph tells you nothing about where it started or ended.
+            if (hasSelection) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = selectionPreview,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = countLabel(selectionLines, selectionPreview.length),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -217,6 +247,9 @@ private fun ToolbarIcon(
         Icon(icon, contentDescription = description)
     }
 }
+
+private fun countLabel(lines: Int, chars: Int): String =
+    if (lines > 1) "$lines lines · $chars" else "$chars"
 
 private val SelectionMode.label: String
     get() = when (this) {
