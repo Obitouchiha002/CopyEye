@@ -36,6 +36,8 @@ kotlinxSerialization = "1.9.0"
 
 # --- ML Kit (on-device OCR, bundled models — no Play Services dependency) -------------------------
 mlkitTextRecognition = "16.0.1"
+mlkitTranslate = "17.0.3"
+androidxExif = "1.4.1"
 
 # --- Shizuku (optional shell-privileged capture) --------------------------------------------------
 shizuku = "13.1.5"
@@ -86,6 +88,8 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 # --- ML Kit --------------------------------------------------------------------------------------
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 mlkit-text-recognition-devanagari = { group = "com.google.mlkit", name = "text-recognition-devanagari", version.ref = "mlkitTextRecognition" }
+mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkitTranslate" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExif" }
 
 # --- Shizuku -------------------------------------------------------------------------------------
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }

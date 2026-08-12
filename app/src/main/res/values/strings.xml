@@ -29,4 +29,10 @@
 
     <!-- Accessibility -->
     <string name="a11y_floating_eye">CopyEye floating scan button</string>
+    <string name="share_no_image">CopyEye can only read images.</string>
+    <string name="share_unreadable">That image could not be opened.</string>
+    <string name="share_target_label">Copy text with CopyEye</string>
+    <string name="translate_downloading">Getting the language pack — about 30 MB, once.</string>
+    <string name="translate_no_model">Could not get the language pack. Check your connection.</string>
+    <string name="translate_failed">Could not translate that.</string>
 </resources>

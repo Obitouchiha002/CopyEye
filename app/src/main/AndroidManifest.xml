@@ -93,6 +93,26 @@
             android:windowSoftInputMode="adjustResize" />
 
         <!--
+          Share any picture to CopyEye and get its text. This is the only way in that needs no
+          permission whatsoever: no overlay, no capture consent, no recording indicator. Android
+          hands the image over because the user chose to.
+        -->
+        <activity
+            android:name=".feature.share.ShareReceiverActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/share_target_label"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.CopyEye.Invisible">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!--
           `configChanges` is what lets the service follow a rotation by resizing the existing
           virtual display; from Android 14 a second `createVirtualDisplay` call is not permitted.
         -->

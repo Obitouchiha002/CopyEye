@@ -21,10 +21,13 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.CurrencyRupee
+import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -60,6 +63,9 @@ fun SelectionToolbar(
     onToggleRegion: () -> Unit,
     onRescan: () -> Unit,
     onShare: () -> Unit,
+    onTranslate: () -> Unit,
+    /** What the translate control is doing right now, so the icon can say so. */
+    translateBusy: Boolean = false,
     onSmartAction: (SmartAction) -> Unit,
     onClose: () -> Unit,
     expanded: Boolean = true,
@@ -138,6 +144,12 @@ fun SelectionToolbar(
                             description = if (regionMode) "Cancel region select" else "Select a region",
                             onClick = onToggleRegion,
                         )
+                        ToolbarIcon(
+                            icon = Icons.Rounded.Translate,
+                            description = "Translate",
+                            onClick = onTranslate,
+                            enabled = !translateBusy,
+                        )
                         ToolbarIcon(Icons.Rounded.Refresh, "Rescan", onRescan)
                         ToolbarIcon(Icons.Rounded.Share, "Share", onShare)
                         ToolbarIcon(Icons.Rounded.Close, "Close", onClose)
@@ -189,9 +201,15 @@ private fun GrabHandle(onClick: () -> Unit) {
 }
 
 @Composable
-private fun ToolbarIcon(icon: ImageVector, description: String, onClick: () -> Unit) {
+private fun ToolbarIcon(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
     TextButton(
         onClick = onClick,
+        enabled = enabled,
         // 48dp is the accessible minimum and also what a thumb actually hits on a moving bar.
         modifier = Modifier.height(48.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
@@ -212,6 +230,8 @@ private fun labelFor(action: SmartAction): String = when (action) {
     is SmartAction.Call -> "Call"
     is SmartAction.Email -> "Email"
     is SmartAction.Map -> "Maps"
+    is SmartAction.Pay -> "Pay"
+    is SmartAction.Otp -> "Copy code"
 }
 
 private fun iconFor(action: SmartAction): ImageVector = when (action) {
@@ -219,4 +239,6 @@ private fun iconFor(action: SmartAction): ImageVector = when (action) {
     is SmartAction.Call -> Icons.Rounded.Call
     is SmartAction.Email -> Icons.Rounded.Email
     is SmartAction.Map -> Icons.Rounded.Place
+    is SmartAction.Pay -> Icons.Rounded.CurrencyRupee
+    is SmartAction.Otp -> Icons.Rounded.Password
 }

@@ -20,4 +20,18 @@
              screen was, with nothing sliding into place. -->
         <item name="android:windowAnimationStyle">@null</item>
     </style>
+
+    <!--
+      A window with nothing in it, for the share receiver.
+
+      NOT Theme.NoDisplay: that one requires finish() before onResume() returns, and decoding a
+      shared photo is asynchronous — the activity crashed with "did not call finish() prior to
+      onResume() completing" on the first real share. Translucent has no such rule, and since
+      nothing is ever drawn the user sees the same nothing either way.
+    -->
+    <style name="Theme.CopyEye.Invisible" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

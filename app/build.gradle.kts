@@ -175,6 +175,8 @@ dependencies {
     // and no Play Services dependency.
     implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.text.recognition.devanagari)
+    implementation(libs.mlkit.translate)
+    implementation(libs.androidx.exifinterface)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)

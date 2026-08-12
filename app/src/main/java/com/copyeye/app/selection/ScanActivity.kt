@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.net.toUri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -107,6 +108,19 @@ class ScanActivity : ComponentActivity() {
                 Intent.ACTION_VIEW,
                 "geo:0,0?q=${Uri.encode(action.value)}".toUri(),
             )
+            // A upi: link with only the payee filled in. Every UPI app opens this and asks for
+            // the amount itself, which is the right place for it — guessing an amount off a
+            // screen and pre-filling it is not a mistake worth risking.
+            is SmartAction.Pay -> Intent(
+                Intent.ACTION_VIEW,
+                "upi://pay?pa=${Uri.encode(action.value)}".toUri(),
+            )
+            // An OTP has nowhere to be sent. It is already on the clipboard by the time this
+            // runs, so the action is simply to get out of the way.
+            is SmartAction.Otp -> null
+        } ?: run {
+            finishQuietly()
+            return
         }
         try {
             startActivity(intent)
@@ -161,6 +175,11 @@ class ScanActivity : ComponentActivity() {
         fun secureScreenIntent(context: Context): Intent =
             Intent(context, ScanActivity::class.java)
                 .putExtra(EXTRA_SECURE_SCREEN, true)
+
+        /** A picture shared in from another app; the frame is already in [FrameStore]. */
+        fun shareIntent(context: Context): Intent =
+            Intent(context, ScanActivity::class.java)
+                .putExtra(EXTRA_REGION_MODE, false)
     }
 
     @Composable
@@ -171,6 +190,18 @@ class ScanActivity : ComponentActivity() {
         onOpenSmartAction: (SmartAction) -> Unit,
         onShare: () -> Unit,
     ) {
+        val translateBusy by viewModel.translateBusy.collectAsStateWithLifecycle()
+        val note by viewModel.note.collectAsStateWithLifecycle()
+
+        // The language pack is the one thing here that can take a while and needs the network, so
+        // it gets said out loud rather than leaving the icon greyed out with no explanation.
+        note?.let { text ->
+            LaunchedEffect(text) {
+                Toast.makeText(this@ScanActivity, text, Toast.LENGTH_LONG).show()
+                viewModel.clearNote()
+            }
+        }
+
         // A copy schedules the close rather than performing it, so the "Copied" confirmation gets
         // its moment on screen before the activity disappears.
         var closeRequested by androidx.compose.runtime.remember {
@@ -258,6 +289,8 @@ class ScanActivity : ComponentActivity() {
                             if (region != null) viewModel.rescanRegion(region)
                         },
                         onShare = onShare,
+                        onTranslate = viewModel::translateSelection,
+                        translateBusy = translateBusy,
                         onSmartAction = onOpenSmartAction,
                         onClose = onClose,
                         expanded = toolbarExpanded,

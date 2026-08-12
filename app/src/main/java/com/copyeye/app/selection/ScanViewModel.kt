@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.copyeye.app.AppContainer
+import com.copyeye.app.R
 import com.copyeye.app.CopyEyeApp
 import com.copyeye.app.capture.FrameStore
 import com.copyeye.app.capture.ScreenFrame
@@ -18,6 +19,7 @@ import com.copyeye.app.ocr.OcrResult
 import com.copyeye.app.ocr.OcrTimedOutException
 import com.copyeye.app.ocr.OcrUnavailableException
 import com.copyeye.app.ocr.SmartActionDetector
+import com.copyeye.app.ocr.TextTranslator
 import com.copyeye.app.ocr.TextRect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -37,6 +39,21 @@ import kotlinx.coroutines.launch
 class ScanViewModel(application: Application) : AndroidViewModel(application) {
 
     private val container: AppContainer = (application as CopyEyeApp).container
+
+    private val translator = TextTranslator()
+    private var translating = false
+
+    private val _translateBusy = MutableStateFlow(false)
+    val translateBusy: StateFlow<Boolean> = _translateBusy.asStateFlow()
+
+    /**
+     * A short note for the scan screen — "downloading the language…", and what went wrong if it
+     * did. Kept here rather than on CopyEyeBus, which deliberately refuses to carry any text.
+     */
+    private val _note = MutableStateFlow<String?>(null)
+    val note: StateFlow<String?> = _note.asStateFlow()
+
+    fun clearNote() { _note.value = null }
 
     private val _uiState = MutableStateFlow<ScanUiState>(ScanUiState.Scanning(null))
     val uiState: StateFlow<ScanUiState> = _uiState.asStateFlow()
@@ -239,6 +256,54 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = state.copy(editing = true, editedText = text)
     }
 
+    /**
+     * Translates what is selected — or everything, if nothing is — and shows the result in the
+     * edit sheet.
+     *
+     * Reusing the edit sheet rather than building a translation screen is deliberate: the reader
+     * can then correct a word, copy it, or share it with the controls that already exist. A
+     * translation you cannot touch is a screenshot with extra steps.
+     */
+    fun translateSelection() = withReady { state, selectionEngine ->
+        if (translating) return@withReady
+        val source = (if (state.hasSelection) selectionEngine.textOf(state.selection) else state.result.fullText)
+            .trim()
+        if (source.isEmpty()) return@withReady
+
+        translating = true
+        _translateBusy.value = true
+        val (from, to) = translator.directionFor(source)
+
+        viewModelScope.launch {
+            try {
+                if (!translator.isReady(from, to)) {
+                    // First use in this direction needs the model. Say what is happening — this
+                    // is the one part of the app that touches the network, and a silent 30 MB
+                    // download on mobile data is not something to spring on anyone.
+                    _note.value = getApplication<Application>().getString(R.string.translate_downloading)
+                    val downloaded = translator.download(from, to, wifiOnly = false)
+                    if (downloaded.isFailure) {
+                        _note.value = getApplication<Application>().getString(R.string.translate_no_model)
+                        return@launch
+                    }
+                }
+                translator.translate(source, from, to)
+                    .onSuccess { out ->
+                        _note.value = null
+                        withReady { current, _ ->
+                            _uiState.value = current.copy(editing = true, editedText = out)
+                        }
+                    }
+                    .onFailure {
+                        _note.value = getApplication<Application>().getString(R.string.translate_failed)
+                    }
+            } finally {
+                translating = false
+                _translateBusy.value = false
+            }
+        }
+    }
+
     fun onEditedTextChanged(text: String) = withReady { state, _ ->
         _uiState.value = state.copy(editedText = text)
     }
@@ -342,6 +407,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         recognitionJob?.cancel()
+        translator.close()
         // The captured frame dies with the session. Nothing is written to disk at any point.
         frame?.release()
         frame = null
