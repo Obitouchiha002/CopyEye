@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
 <title>CopyEye — Copy any text you can see on your Android screen</title>
-<meta name="description" content="CopyEye lifts text off any Android screen — videos, Reels, Shorts, screenshots, games, PDFs and apps that block selection. English and Hindi, recognised on your phone — nothing you scan or copy is ever sent anywhere. Free APK, 17 MB, Android 10+.">
+<meta name="description" content="CopyEye lifts text off any Android screen — videos, Reels, Shorts, screenshots, games, PDFs and apps that block selection. English and Hindi, recognised on your phone — nothing you scan or copy is ever sent anywhere. Free APK, 33 MB, Android 10+.">
 <link rel="canonical" href="https://copyeye.lzworth.in/">
 <meta name="theme-color" content="#0B0D14" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F7F7FB" media="(prefers-color-scheme: light)">
@@ -115,7 +115,7 @@
           "name": "Which Android versions does CopyEye support?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Android 10 and every version above it. The download is about 17 MB for most phones."
+            "text": "Android 10 and every version above it. The download is about 33 MB — most of that is the on-device recognition and translation models, which is why nothing you scan needs a connection."
           }
         },
         {
@@ -872,6 +872,14 @@ p { margin: 0; max-width: min(var(--measure), 100%); }
 .faq details[open] summary::after { content: "−"; }
 .faq p { padding: 0 0 26px; color: var(--text-2); font-size: 18.5px; }
 
+.dl__also {
+  margin-top: 34px; padding-top: 26px;
+  border-top: 1px solid var(--night-line);
+}
+.dl__also h3 { font-size: 1.4rem; letter-spacing: -.02em; margin: 4px 0 8px; }
+.dl__also p { max-width: min(56ch, 100%); }
+.dl__also .dl__row { margin-top: 16px; }
+
 /* ── Download ──────────────────────────────────────────────── */
 .dl {
   border: 1px solid var(--line);
@@ -1332,7 +1340,7 @@ footer { border-top: 1px solid var(--line); padding-block: 40px 56px; }
           </a>
           <a class="btn btn--ghost" href="#how">See how it works</a>
         </div>
-        <p class="hero__meta">17 MB · Android 10+ · free · no sign-in · no ads</p>
+        <p class="hero__meta">33 MB · Android 10+ · free · no sign-in · no ads</p>
       </div>
 
       <div class="eyewrap">
@@ -1702,7 +1710,7 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
              site is a download that can fail for reasons the visitor cannot see. -->
         <div class="dl__row">
           <a class="btn" href="/CopyEye.apk" download="CopyEye.apk">
-            Download · 17 MB
+            Download · 33 MB
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
               <path d="M12 4v13m0 0 5-5m-5 5-5-5M4 20h16"/>
             </svg>
@@ -1713,6 +1721,27 @@ $ <strong>grep INTERNET AndroidManifest.xml</strong>
           Fits every 64-bit phone, which is effectively every Android phone sold since 2015.
           A 32-bit-only handset will refuse it — write in and I will send you a build.
         </p>
+
+        <!-- The extension is not on the Chrome Web Store, so it is offered the only other way
+             Chrome allows: as a folder you load yourself. The steps are here rather than behind
+             a link because "load unpacked" is not something most people have done before. -->
+        <div class="dl__also">
+          <p class="eyebrow">Also on your computer</p>
+          <h3>CopyEye for Chrome</h3>
+          <p>
+            Right-click any image, any video frame, or a box you draw on the page, and get the text
+            out of it. English and Hindi, read on your own machine, and it keeps working offline.
+          </p>
+          <div class="dl__row">
+            <a class="btn btn--ghost" href="/CopyEye-chrome.zip" download="CopyEye-chrome.zip">
+              Download for Chrome · 7 MB
+            </a>
+          </div>
+          <p class="dl__note">
+            Unzip it, then in Chrome open <b>chrome://extensions</b>, turn on <b>Developer mode</b>,
+            and choose <b>Load unpacked</b>. It is not in the Chrome Web Store, so this is the way in.
+          </p>
+        </div>
       </div>
     </div>
   </section>
