@@ -39,10 +39,6 @@
     {
       "source": "/developer",
       "destination": "/developer.html"
-    },
-    {
-      "source": "/premium",
-      "destination": "/premium.html"
     }
   ]
 }

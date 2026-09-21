@@ -20,7 +20,6 @@ import com.copyeye.app.ocr.OcrTimedOutException
 import com.copyeye.app.ocr.OcrUnavailableException
 import com.copyeye.app.ocr.SmartActionDetector
 import com.copyeye.app.ocr.TextTranslator
-import com.copyeye.app.remote.Premium
 import com.copyeye.app.ocr.TextRect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -280,18 +279,8 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
                 // Try to translate outright. The translator reaches for the server model first,
                 // which needs no download at all — so checking for the offline model before
                 // trying would make everyone wait for 30 MB they may never need.
-                val app = getApplication<Application>()
-                val isPremium = container.settingsRepository.settings.first().premium
-                val allowNatural = Premium.mayUseNatural(app, isPremium)
-                var wasNatural = false
-                val first = translator.translate(source, from, to, allowNatural) { wasNatural = it }
+                val first = translator.translate(source, from, to)
                 if (first.isSuccess) {
-                    if (wasNatural) Premium.recordNatural(app, isPremium)
-                    // Out of free natural translations: the result is ML Kit's, and the reader
-                    // deserves to know why it suddenly reads like a textbook.
-                    if (!allowNatural) {
-                        _note.value = app.getString(R.string.translate_quota_spent, Premium.FREE_NATURAL_PER_DAY)
-                    }
                     val out = first.getOrThrow()
                     withReady { current, _ ->
                         _uiState.value = current.copy(editing = true, editedText = out)
