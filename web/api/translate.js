@@ -11,7 +11,21 @@
  */
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
+
+/**
+ * Models to try, in order.
+ *
+ * This used to be one hard-coded name, llama-3.3-70b-versatile. Groq retired it, every call began
+ * returning model_not_found, and because the app falls back to ML Kit on any failure nobody saw an
+ * error — translation just quietly went back to textbook Hindi for everyone. Found a month later.
+ *
+ * So: a chain, and an override. GROQ_MODELS in the Vercel dashboard replaces the list without a
+ * deploy, which is the fix for the next retirement. The defaults were chosen by running the same
+ * test sentences through each — qwen read "summer" as गर्मी and kept "Maze Bank" as a name, at
+ * roughly half gpt-oss's latency.
+ */
+const MODELS = (process.env.GROQ_MODELS || 'qwen/qwen3.8-27b,openai/gpt-oss-120b')
+  .split(',').map((m) => m.trim()).filter(Boolean);
 
 /** Long enough for a caption or a paragraph, short enough that nobody translates a book on your bill. */
 const MAX_CHARS = 4000;
@@ -61,34 +75,50 @@ export default async function handler(req, res) {
   const target = to === 'en' ? 'English' : 'Hindi';
 
   try {
-    const upstream = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
+    for (const model of MODELS) {
+      const body = {
+        model,
         temperature: 0.2,
         max_tokens: 1200,
         messages: [
           { role: 'system', content: SYSTEM },
           { role: 'user', content: `Translate into ${target}:\n\n${text}` },
         ],
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
+      };
+      // Reasoning models spend their budget thinking unless told the task is simple.
+      if (model.startsWith('openai/gpt-oss')) body.reasoning_effort = 'low';
 
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      console.error('groq', upstream.status, detail.slice(0, 300));
-      return res.status(502).json({ error: 'upstream' });
+      const upstream = await fetch(GROQ_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (!upstream.ok) {
+        const detail = await upstream.text();
+        // Only a missing model is worth trying the next one for. A bad key or an exhausted quota
+        // will fail the same way on every model, so stop and say so.
+        if (upstream.status === 404 || /model_not_found|decommissioned/.test(detail)) {
+          console.error('groq model unavailable, trying next:', model);
+          continue;
+        }
+        console.error('groq', model, upstream.status, detail.slice(0, 300));
+        return res.status(502).json({ error: 'upstream' });
+      }
+
+      const data = await upstream.json();
+      let out = data?.choices?.[0]?.message?.content?.trim();
+      if (!out) continue;
+
+      // Some models think out loud in <think> tags even when not asked to.
+      out = out.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      // And most wrap a translation in quotes even when told not to.
+      const cleaned = out.replace(/^["'“”]+|["'“”]+$/g, '').trim();
+      if (cleaned) return res.status(200).json({ text: cleaned });
     }
-
-    const data = await upstream.json();
-    const out = data?.choices?.[0]?.message?.content?.trim();
-    if (!out) return res.status(502).json({ error: 'empty' });
-
-    // Models like to wrap a translation in quotes even when told not to.
-    const cleaned = out.replace(/^["'“”]+|["'“”]+$/g, '').trim();
-    return res.status(200).json({ text: cleaned });
+    console.error('groq: every model in the chain was unavailable', MODELS);
+    return res.status(502).json({ error: 'no model available' });
   } catch (e) {
     console.error('translate', e?.message);
     return res.status(504).json({ error: 'timeout' });
