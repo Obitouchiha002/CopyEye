@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.copyeye.app.AppContainer
+import com.copyeye.app.remote.Premium
 import com.copyeye.app.core.state.CopyEyeBus
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
@@ -68,6 +69,8 @@ fun HomeScreen(
 ) {
     val serviceRunning by CopyEyeBus.serviceRunning.collectAsStateWithLifecycle()
     val canDrawOverlays = container.permissionChecker.canDrawOverlays()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settings by container.settingsRepository.settings.collectAsStateWithLifecycle(initialValue = null)
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("CopyEye") }) },
@@ -120,6 +123,14 @@ fun HomeScreen(
                     )
                 }
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            PremiumCard(
+                isPremium = settings?.premium == true,
+                freeLeftToday = Premium.remainingToday(context),
+                onGetPremium = { onOpenSystemIntent(Premium.purchaseIntent(context)) },
+            )
 
             Spacer(Modifier.height(8.dp))
 
@@ -271,6 +282,50 @@ private fun HeroCard(running: Boolean, canDrawOverlays: Boolean) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+
+/**
+ * Premium, said once and plainly.
+ *
+ * It sits below the on/off switch, never above it: someone opening the app wants to use it, and
+ * a sales card in front of the one button that matters would be the wrong priority. It also says
+ * what stays free before it says what costs money, because "the core is free" is the reason to
+ * trust the rest.
+ */
+@androidx.compose.runtime.Composable
+private fun PremiumCard(isPremium: Boolean, freeLeftToday: Int, onGetPremium: () -> Unit) {
+    androidx.compose.material3.Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isPremium) 0.45f else 0.7f),
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = if (isPremium) "Premium is on" else "Natural translation",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (isPremium) {
+                    "Unlimited natural Hindi ⇄ English translation. Thank you for keeping CopyEye alive."
+                } else {
+                    "Everyday Hindi, the way people speak it. $freeLeftToday of ${Premium.FREE_NATURAL_PER_DAY} " +
+                        "free today — copying and offline translation are always free."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!isPremium) {
+                Spacer(Modifier.height(14.dp))
+                Button(
+                    onClick = onGetPremium,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Unlimited for ₹99 a year") }
             }
         }
     }

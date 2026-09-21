@@ -126,10 +126,27 @@ class TextTranslator {
             }.getOrNull()
         }
 
-    suspend fun translate(text: String, from: String, to: String): Result<String> =
+    /**
+     * [allowNatural] is decided by the caller from premium and the daily allowance. When it is
+     * false this goes straight to ML Kit: still a translation, still offline, just the textbook
+     * register. [usedNatural] reports back which engine answered, so only a real server call is
+     * counted against the allowance.
+     */
+    suspend fun translate(
+        text: String,
+        from: String,
+        to: String,
+        allowNatural: Boolean = true,
+        usedNatural: (Boolean) -> Unit = {},
+    ): Result<String> =
         withContext(Dispatchers.IO) {
-            // The good one first. It is the only reason someone would notice this feature at all.
-            translateRemote(text, to)?.let { return@withContext Result.success(it) }
+            if (allowNatural) {
+                translateRemote(text, to)?.let {
+                    usedNatural(true)
+                    return@withContext Result.success(it)
+                }
+            }
+            usedNatural(false)
             runCatching {
                 await<String> { c ->
                     translator(from, to).translate(text)
